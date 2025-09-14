@@ -2,7 +2,7 @@
     "version": 8,
     "configurePresets": [
         {
-            "name": "Mingw w64",
+            "name": "gcc",
             "displayName": "GCC 14.2.0 x86_64-w64-mingw32",
             "description": "正在使用编译器: C = D:\\ProgramFiles\\mingw64\\bin\\gcc.exe, CXX = D:\\ProgramFiles\\mingw64\\bin\\g++.exe",
             "generator": "MinGW Makefiles",
