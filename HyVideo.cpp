@@ -5,8 +5,6 @@
 #include <omp.h>
 #include <chrono>
 #include "Task.hpp"
-#include "Video.hpp"
-#include "VideoFrameReader.hpp"
 
 using namespace std;
 uint32_t cpu_num=1;
@@ -15,45 +13,64 @@ int _argc,_argn=1;
 char **_argv=nullptr;
 char* nextArg(bool need=false){
     if(_argn>=_argc){
-        if(need) throw string("缺少参数");
+        if(need) ThrowErr("缺少参数");
         else return nullptr;
     }
-    else return _argv[_argn++];
+    return _argv[_argn++];
+}
+
+void analyzeTask(string str, TaskType& tasktype, TaskArgs& typeargs){
+    vector<string> clips=strsplit(tolower(str.substr(1)),":");
+    string type=clips[0];
+    map<string,optional<string>> args;
+    if(type=="calc"){
+        tasktype=CALC_SCORES;
+    }else if(type=="transcode"){
+        tasktype=TRANSCODE;
+    }else{
+        ThrowErr("未知任务: "+type);
+    }
+    for(int i=1,index ; i<clips.size() ; ++i){
+        if((index=clips[i].find('='))>=0){
+            args[clips[i].substr(0,index)]=
+                clips[i].substr(index+1);
+        }else
+            args[clips[i]]="on";
+    }
+    typeargs=args;
 }
 
 int main(int argc, char *argv[]){
     _argc=argc, _argv=argv;
     cpu_num=thread::hardware_concurrency();
     omp_set_num_threads(cpu_num);
+    vector<Task> tasks;
+    TaskType tasktype=CALC_SCORES;
+    TaskArgs taskargs;
     try{
-        vector<Task> tasks;
         const char* arg;
         while (arg=nextArg()){
-            if(arg[0]=='-'){
-                ;
+            if(arg[0]==':'){
+                analyzeTask(arg,tasktype,taskargs);
+                tasks.emplace_back(tasktype,taskargs);
             }else{
+                if(tasks.empty()) ThrowErr("请先指定任务Task");
                 string file=arg;
-                Task& t=tasks.emplace_back();
-                Video& vd=t.addInput(file);
-                av_log(NULL, AV_LOG_INFO,"添加[%s]\n",arg);
+                Task& task=tasks.back();
+                InputVideo& vd=task.addInput(file);
+                AvLog("添加[%s]\n",arg);
                 vd.Print();
-
-                clock_t ts=clock();
-                auto score=t.CalcScores(ScoreType::MSE)[0];
-                ts=clock()-ts;
-                size_t n=score.getScores().size();
-                av_log(NULL, AV_LOG_INFO,"数据量:%d,耗时:%d(%lf)",n,ts,1.0*n/ts);
-
-                char data[score.Dump()];
-                score.Dump((uint8_t*)data);
-                string outpath=file.substr(0,file.rfind('.'));
-                ofstream of(withsuffix(file,"scob"), ios::binary);
-                of.write(data, sizeof(data));
-                of.close();
             }
         }
     }catch(string errMsg){
         av_log(NULL, AV_LOG_ERROR, "%s\n", errMsg.c_str());
+        return -1;
+    }
+    try{
+        for(Task& task:tasks) task.Run();
+    }catch(string errMsg){
+        av_log(NULL, AV_LOG_ERROR, "%s\n", errMsg.c_str());
+        return -1;
     }
     return 0;
 }

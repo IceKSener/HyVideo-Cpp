@@ -1,5 +1,5 @@
-#ifndef VIDEO_HPP
-#define VIDEO_HPP 1
+#ifndef INPUTVIDEO_HPP
+#define INPUTVIDEO_HPP 1
 
 #include <string>
 #include <vector>
@@ -10,16 +10,14 @@ extern "C"{
 }
 #include "Common.hpp"
 
-enum VideoMode{
-    IN, OUT
-};
-class Video{
+class InputVideo{
+friend class OutputVideo;
 friend class Task;
 friend class VideoFrameReader;
+friend class VideoFrameWriter;
 private:
-    std::string _path;
-    VideoMode _mode;
-    bool _is_open = false;
+    std::string path;
+    bool is_open = false;
     int width=0, height=0;
     AVRational fps={0,1};
     
@@ -29,19 +27,18 @@ private:
     const AVCodec *codec = nullptr;
     AVPixelFormat pix_fmt;
 
-    void OpenInput();
+    InputVideo(const InputVideo& v)=default;
+    InputVideo& operator=(const InputVideo& v)=default;
 public:
-    Video(const Video& v)=default;
-    Video& operator=(const Video& v)=default;
-    Video(std::string path, VideoMode mode=IN);
-    Video(Video&& v);
-    ~Video();
+    InputVideo(std::string path);
+    InputVideo(InputVideo&& v);
+    ~InputVideo();
 
-    void OpenOutput();
+    void OpenInput();
+
     void Print();
-
     //DEBUG
     AVStream* getVS(){ return v_stream; }
 };
 
-#endif //VIDEO_HPP
+#endif //INPUTVIDEO_HPP

@@ -3,7 +3,7 @@
 
 #include "Common.hpp"
 #include "IFrameGetter.hpp"
-#include "Video.hpp"
+#include "InputVideo.hpp"
 
 class VideoFrameReader:public IFreamGetter{
 private:
@@ -14,7 +14,7 @@ private:
     int vs_index = -1;
     bool _NextVideoPacket();
 public:
-    VideoFrameReader(Video& vd, int vs_index=-1);
+    VideoFrameReader(InputVideo& vd, int vs_index=-1);
     ~VideoFrameReader();
     AVFrame* NextFrame(AVFrame *fr=nullptr) override;
 };

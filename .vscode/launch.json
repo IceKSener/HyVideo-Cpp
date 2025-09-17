@@ -7,14 +7,23 @@
             "request": "launch",
             "program": "${workspaceFolder}/out/build/gcc/HyVideo.exe",
             "args": [
-                "W:\\test.mp4"
+                ":calc:type=mse",
+                "W:\\test.mp4",
+                "W:\\hakai.mp4"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
-            "preLaunchTask": "CMake: 生成"
+            "preLaunchTask": "CMake: 生成",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for LLDB",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
         }
     ]
 }

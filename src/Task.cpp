@@ -2,36 +2,69 @@
 
 using namespace std;
 
-Video& Task::addInput(string path){
+InputVideo& Task::addInput(string path){
     return inputs.emplace_back(path);;
 }
-Video& Task::addOutput(string path, string format){
-    Video& vd=outputs.emplace_back(path);
-    return vd;
+OutputVideo& Task::addOutput(string path, string format){
+    return outputs.emplace_back(path);;
+}
+
+bool Task::Run(){
+    if(type==CALC_SCORES){
+        string score_type=args["type"].value_or("mse");
+        vector<Score> scores;
+        if(score_type=="mse") scores=CalcScores(ScoreType::MSE);
+        else ThrowErr("未知指数类型");
+        bool coverAll=false;
+        char *data=nullptr;
+        int datalen;
+        ofstream of;
+        for(int i=0; i<inputs.size() ; ++i){
+            string path=withsuffix(inputs[i].path,"scob");
+            if(isfile(path)&&!coverAll){
+                AvLog("\"%s\"已存在，是否覆盖[y/a(全部覆盖)/n]:",path.c_str());
+                fflush(stdin);
+                switch(tolower(getchar())){
+                case 'a': coverAll=true;
+                case 'y': break;
+                case 'n':
+                default: continue;;
+                }
+            }
+            of.open(path,ios::binary);
+            datalen=scores[i].Dump();
+            data=new char[datalen];
+            scores[i].Dump((uint8_t*)data);
+            of.write(data,datalen);
+            delete[] data;
+            of.close();
+        }
+    }
+    return true;
 }
 
 vector<Score> Task::CalcScores(ScoreType type){
     vector<Score> scores;
-    for(Video& vd:inputs){
+    for(InputVideo& vd:inputs){
         switch(type){
         case ScoreType::MSE:
             scores.push_back(CalcMSE(vd).setFPS(av_q2d(vd.fps)));
             break;
         default:
-            throw string("未知指数类型");
+            ThrowErr("未知指数类型");
             break;
         }
     }
     return scores;
 }
-Score Task::CalcMSE(Video& vd){
+Score Task::CalcMSE(InputVideo& vd){
     vector<double> result;
     result.push_back(0);
     VideoFrameReader vfr(vd);
     AVFrame *f1, *f2, *tmp;
     AssertP(f1=av_frame_alloc());
     AssertP(f2=av_frame_alloc());
-    if(!vfr.NextFrame(f1)) throw (string)"无法读取视频帧";
+    if(!vfr.NextFrame(f1)) ThrowErr("无法读取视频帧");
     while(vfr.NextFrame(f2)){
         result.push_back(_CalcMSE(f1,f2));
         av_frame_unref(f1);

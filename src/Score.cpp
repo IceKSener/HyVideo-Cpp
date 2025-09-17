@@ -5,10 +5,10 @@ using namespace std;
 Score::Score(const std::vector<double>& scores, ScoreType type):scores(scores),type(type){ }
 Score Score::LoadScob(std::string path){
     ifstream infile(path,ios::binary);
-    if(!infile.is_open()) throw string("无法打开文件: ")+path;
+    if(!infile.is_open()) ThrowErr("无法打开文件: "+path);
     uint32_t magic;
     infile.read((char*)&magic, 4);
-    if(magic!=MAGIC.i) throw string("非ScoreBin文件: ")+path;
+    if(magic!=MAGIC.i) ThrowErr("非ScoreBin文件: "+path);
 
     vector<double> s;
     Score score(s);

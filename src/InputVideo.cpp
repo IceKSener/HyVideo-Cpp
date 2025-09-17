@@ -1,25 +1,17 @@
-#include "Video.hpp"
+#include "InputVideo.hpp"
 
 using namespace std;
-Video::Video(string path, VideoMode mode):_path(path),_mode(mode){
-    if(mode==VideoMode::IN){
-        OpenInput();
-    }
-}
-Video::Video(Video&& vd){
+InputVideo::InputVideo(string path):path(path){ }
+InputVideo::InputVideo(InputVideo&& vd){
     *this=vd;
     memset(&vd, 0, sizeof(vd));
 }
 
-Video::~Video(){
-    if(fmt_ctx){
-        if(_mode==VideoMode::IN) avformat_close_input(&fmt_ctx);
-        else ;//TODO
-    }
+InputVideo::~InputVideo(){
+    if(fmt_ctx) avformat_close_input(&fmt_ctx);
 }
-
-void Video::OpenInput(){
-    Assert(avformat_open_input(&fmt_ctx, _path.c_str(), NULL, NULL));
+void InputVideo::OpenInput(){
+    Assert(avformat_open_input(&fmt_ctx, path.c_str(), NULL, NULL));
     Assert(avformat_find_stream_info(fmt_ctx, NULL));
 
     for(int i=0 ; i<fmt_ctx->nb_streams ; ++i){
@@ -36,15 +28,11 @@ void Video::OpenInput(){
         }
     }
 
-    _is_open=true;
+    is_open=true;
 }
 
-void Video::OpenOutput(){
-    if(_mode!=VideoMode::OUT || _is_open) return;
-    return;
-}
-
-void Video::Print(){
+void InputVideo::Print(){
+    if(!is_open) OpenInput();
     printf("%dx%d(Rate:%.3lf,codec:%s)\n",width,height,av_q2d(fps),codec->long_name);
     AVCodecParameters *param = v_stream->codecpar;
     printf("FrameSize:%d bytes\n",av_image_get_buffer_size((AVPixelFormat)param->format,param->width,param->height,1));

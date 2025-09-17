@@ -19,10 +19,8 @@ bool VideoFrameReader::_NextVideoPacket(){
     }
 }
 
-VideoFrameReader::VideoFrameReader(Video& vd, int vs_index){
-    if(vd._mode!=VideoMode::IN){
-        throw vd._path+" 不是输入视频";
-    }
+VideoFrameReader::VideoFrameReader(InputVideo& vd, int vs_index){
+    if(!vd.is_open) vd.OpenInput();
     fmt_ctx=vd.fmt_ctx;
     if(vs_index<0){
         AssertI(vs_index=av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO,-1,-1,NULL,0));
