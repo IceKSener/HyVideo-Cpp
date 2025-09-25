@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <fstream>
+#include <filesystem>
 extern "C"{
 #include "libavutil/avutil.h"
 #include "libavcodec/avcodec.h"
@@ -29,7 +29,8 @@ void* _assertP(void* p, const char* file, int line);
 std::string tolower(std::string str);
 std::vector<std::string> strsplit(std::string str, const std::string& c);
 std::string withsuffix(const std::string& file, const std::string& suffix);
-bool isfile(const std::string& path);
+bool isfile(const std::filesystem::path& path);
+bool findConf(std::filesystem::path& out, const std::string& name,const std::filesystem::path& dir);
 double _CalcMSE(const AVFrame *f1, const AVFrame *f2);
 
 #endif //COMMON_HPP

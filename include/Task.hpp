@@ -8,6 +8,7 @@
 #include "OutputVideo.hpp"
 #include "VideoFrameReader.hpp"
 #include "Score.hpp"
+#include "nlohmann\json.hpp"
 
 extern "C"{
     #include "libavutil/avutil.h"
@@ -25,6 +26,11 @@ private:
     Score CalcMSE(InputVideo& vd);
     TaskArgs args;
 
+    inline static std::string conf_dir="./configs/";
+    nlohmann::json ReadConf(const std::string& conf,const std::string& type);
+    std::string getStr(TaskArgs args, const std::string key, const std::string& def="");
+    int getInt(TaskArgs args, const std::string key, int def=0);
+    double getReal(TaskArgs args, const std::string key, double def=0);
     std::vector<Score> CalcScores(ScoreType type);
 public:
     Task(TaskType type, TaskArgs& args):type(type),args(args){ }

@@ -1,23 +1,27 @@
 #include <string>
 #include <vector>
-#include <fstream>
 #include <thread>
 #include <omp.h>
-#include <chrono>
 #include "Task.hpp"
 
 using namespace std;
 uint32_t cpu_num=1;
 
-int _argc,_argn=1;
-char **_argv=nullptr;
-char* nextArg(bool need=false){
-    if(_argn>=_argc){
-        if(need) ThrowErr("缺少参数");
-        else return nullptr;
+class ArgsParser{
+private:
+    const int argc;
+    char **argv;
+    int argi;
+public:
+    ArgsParser(int argc, char **argv):argc(argc),argv(argv),argi(1){}
+    const char* nextArg(bool need=false){
+        if(argi>=argc){
+            if(need) ThrowErr("缺少参数");
+            else return nullptr;
+        }
+        return argv[argi++];
     }
-    return _argv[_argn++];
-}
+};
 
 void analyzeTask(string str, TaskType& tasktype, TaskArgs& typeargs){
     vector<string> clips=strsplit(tolower(str.substr(1)),":");
@@ -41,15 +45,15 @@ void analyzeTask(string str, TaskType& tasktype, TaskArgs& typeargs){
 }
 
 int main(int argc, char *argv[]){
-    _argc=argc, _argv=argv;
+    ArgsParser ap(argc, argv);
     cpu_num=thread::hardware_concurrency();
     omp_set_num_threads(cpu_num);
     vector<Task> tasks;
-    TaskType tasktype=CALC_SCORES;
-    TaskArgs taskargs;
     try{
+        TaskType tasktype=CALC_SCORES;
+        TaskArgs taskargs;
         const char* arg;
-        while (arg=nextArg()){
+        while (arg=ap.nextArg()){
             if(arg[0]==':'){
                 analyzeTask(arg,tasktype,taskargs);
                 tasks.emplace_back(tasktype,taskargs);
