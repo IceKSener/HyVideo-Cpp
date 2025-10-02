@@ -7,9 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/out/build/gcc/HyVideo.exe",
             "args": [
-                ":calc:type=mse",
-                "W:\\test.mp4",
-                "W:\\hakai.mp4"
+                ":transcode:conf_in=a"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -1,4 +1,5 @@
 /out
 /bin
-*.cmake
-/configs
+test.cmake
+* copy
+*.hex.h

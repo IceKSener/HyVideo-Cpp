@@ -69,6 +69,7 @@
         "typeinfo": "cpp",
         "variant": "cpp",
         "*.inc": "cpp",
-        "strstream": "cpp"
+        "strstream": "cpp",
+        "ranges": "cpp"
     }
 }

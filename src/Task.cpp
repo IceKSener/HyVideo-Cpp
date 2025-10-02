@@ -69,17 +69,17 @@ bool Task::Run(){
             struct _upscale{
                 bool use_gpu=false;
                 bool process=true;
-                string engine="rife";
-                string model="rife-v4.22-lite";
-                double target_fps=60;
-            };
-            struct _interpolation{
-                bool use_gpu=false;
-                bool process=true;
                 string engine="real-cugan";
                 string model="models-nose";
                 int upscale=2;
                 int denoise=0;
+            };
+            struct _interpolation{
+                bool use_gpu=false;
+                bool process=true;
+                string engine="rife";
+                string model="rife-v4.22-lite";
+                double target_fps=60;
             };
             optional<_upscale> upscale;
             optional<_interpolation> interpolation;
@@ -101,9 +101,23 @@ bool Task::Run(){
                     if(cfg["type"]!="in") throw "配置"+conf+"不是输入配置";
                     if(cfg["upscale"]["enable"]==true){
                         AvLog("打开超分辨率\n");
+                        auto& pro_v=processes.upscale.emplace();
+                        auto& json_v=cfg["upscale"];
+                        if(json_v["engine"].is_string())    pro_v.engine  =json_v["engine"];
+                        if(json_v["use_gpu"].is_boolean())  pro_v.use_gpu =json_v["use_gpu"];
+                        if(json_v["model"].is_string())     pro_v.model   =json_v["engine"];
+                        if(json_v["upscale"].is_number_integer())   pro_v.upscale =json_v["upscale"];
+                        if(json_v["denoise"].is_number_integer())   pro_v.denoise =json_v["denoise"];
                     }
                     if(cfg["interpolation"]["enable"]==true){
                         AvLog("打开补帧\n");
+                        auto& pro_v=processes.interpolation.emplace();
+                        auto& json_v=cfg["interpolation"];
+                        if(json_v["engine"].is_string())    pro_v.engine  =json_v["engine"];
+                        if(json_v["use_gpu"].is_boolean())  pro_v.use_gpu =json_v["use_gpu"];
+                        if(json_v["model"].is_string())     pro_v.model   =json_v["model"];
+                        if(json_v["process"].is_boolean())  pro_v.process =json_v["process"];
+                        if(json_v["target_fps"].is_number_integer())    pro_v.target_fps  =json_v["target_fps"];
                     }
                 }catch(string err){
                     ThrowErr(err);
@@ -116,7 +130,9 @@ bool Task::Run(){
                 AvLog("输入配置:%s\n",conf.c_str());
             }
         for(int i=0; i<inputs.size() ; ++i){
-            ;//TODO ReadFrame ProcessFrames
+            if(processes.upscale){
+                ;
+            }//TODO ReadFrame ProcessFrames
             for(int j=0; j<targets.size(); ++j){
                 ;//TODO ConfigOutput WriteOutput
             }
