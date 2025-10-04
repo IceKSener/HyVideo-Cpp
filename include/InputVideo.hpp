@@ -1,14 +1,12 @@
 #ifndef INPUTVIDEO_HPP
 #define INPUTVIDEO_HPP 1
 
-#include <string>
-#include <vector>
 extern "C"{
     #include "libavformat/avformat.h"
     #include "libavcodec/avcodec.h"
-    #include "libavutil/imgutils.h"
 }
-#include "Common.hpp"
+#include <string>
+#include <vector>
 
 class InputVideo{
 friend class OutputVideo;
@@ -20,12 +18,13 @@ private:
     bool is_open = false;
     int width=0, height=0;
     AVRational fps={0,1};
+    int num_frames=0;    //不一定准确
+    AVPixelFormat pix_fmt;
     
     AVFormatContext *fmt_ctx = nullptr;
     AVStream* v_stream = nullptr;
     std::vector<AVStream*> a_streams;
     const AVCodec *codec = nullptr;
-    AVPixelFormat pix_fmt;
 
     InputVideo(const InputVideo& v)=default;
     InputVideo& operator=(const InputVideo& v)=default;

@@ -1,4 +1,8 @@
 #include "OutputVideo.hpp"
+#include "Common.hpp"
+extern "C"{
+    #include "libavutil/imgutils.h"
+}
 
 using namespace std;
 OutputVideo::OutputVideo(string path):path(path){ }

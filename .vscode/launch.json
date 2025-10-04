@@ -5,9 +5,11 @@
             "name": "CMake Debug (Terminal)",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/out/build/gcc/HyVideo.exe",
+            "program": "${workspaceFolder}/out/build/UCRT64/HyVideo.exe",
             "args": [
-                ":transcode:conf_in=a"
+                ":calc:type=mse",
+                "W:/a.mp4",
+                "W:/b.mp4"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

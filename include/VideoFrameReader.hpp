@@ -14,7 +14,7 @@ private:
     int vs_index = -1;
     bool _NextVideoPacket();
 public:
-    VideoFrameReader(InputVideo& vd, int vs_index=-1);
+    VideoFrameReader(InputVideo& vd);
     ~VideoFrameReader();
     AVFrame* NextFrame(AVFrame *fr=nullptr) override;
 };

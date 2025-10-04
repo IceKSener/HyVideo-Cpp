@@ -1,14 +1,10 @@
 #ifndef TASK_HPP
 #define TASK_HPP 1
 
+#include "InputVideo.hpp"
 #include <vector>
 #include <optional>
 #include <map>
-#include "InputVideo.hpp"
-#include "OutputVideo.hpp"
-#include "VideoFrameReader.hpp"
-#include "Score.hpp"
-#include "nlohmann\json.hpp"
 
 extern "C"{
     #include "libavutil/avutil.h"
@@ -22,23 +18,18 @@ class Task{
 private:
     TaskType type = CALC_SCORES;
     std::vector<InputVideo> inputs;
-    std::vector<OutputVideo> outputs;
-    Score CalcMSE(InputVideo& vd);
     TaskArgs args;
 
-    inline static std::string conf_dir="./configs/";
-    nlohmann::json ReadConf(const std::string& conf,const std::string& type);
     std::string getStr(TaskArgs args, const std::string key, const std::string& def="");
     int getInt(TaskArgs args, const std::string key, int def=0);
     double getReal(TaskArgs args, const std::string key, double def=0);
-    std::vector<Score> CalcScores(ScoreType type);
+    bool _taskCalcScores();
+    bool _taskTranscode();
 public:
     Task(TaskType type, TaskArgs& args):type(type),args(args){ }
     std::vector<InputVideo>& getInputs(){ return inputs; }
-    std::vector<OutputVideo>& getOutputs(){ return outputs; }
 
     InputVideo& addInput(std::string path);
-    OutputVideo& addOutput(std::string path, std::string format);
 
     bool Run();
 };

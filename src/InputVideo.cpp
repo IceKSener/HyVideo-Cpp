@@ -1,4 +1,9 @@
 #include "InputVideo.hpp"
+extern "C"{
+    #include "libavutil/imgutils.h"
+}
+
+#include "Common.hpp"
 
 using namespace std;
 InputVideo::InputVideo(string path):path(path){ }
@@ -23,6 +28,8 @@ void InputVideo::OpenInput(){
             fps = stream->avg_frame_rate;
             codec = avcodec_find_decoder(stream->codecpar->codec_id);
             pix_fmt = (AVPixelFormat)v_stream->codecpar->format;
+            num_frames = v_stream->nb_frames;
+            if(!num_frames) num_frames=v_stream->duration*av_q2d(fps)*av_q2d(v_stream->time_base);
         }else if(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO){
             a_streams.push_back(stream);
         }

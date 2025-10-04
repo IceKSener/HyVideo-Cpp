@@ -1,15 +1,13 @@
 #ifndef OUTPUTVIDEO_HPP
 #define OUTPUTVIDEO_HPP 1
 
-#include <string>
-#include <vector>
+#include "InputVideo.hpp"
 extern "C"{
     #include "libavformat/avformat.h"
     #include "libavcodec/avcodec.h"
-    #include "libavutil/imgutils.h"
 }
-#include "Common.hpp"
-#include "InputVideo.hpp"
+#include <string>
+#include <vector>
 
 class OutputVideo{
 friend class Task;

@@ -6,25 +6,17 @@ SET (CMAKE_CXX_STANDARD 17)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 find_package(PkgConfig REQUIRED)
+find_package(OpenMP REQUIRED)
+pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
+pkg_check_modules(NCNN REQUIRED ncnn)
+link_directories(${NCNN_LIBRARY_DIRS})
+include_directories(${FFMPEG_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS})
 
-pkg_check_modules(AVCODEC REQUIRED libavcodec)
-pkg_check_modules(AVFORMAT REQUIRED libavformat)
-pkg_check_modules(AVUTIL REQUIRED libavutil)
-include_directories(${AVFORMAT_INCLUDE_DIRS} ${AVCODEC_INCLUDE_DIRS} ${AVUTIL_INCLUDE_DIRS})
-
-set(NCNN_DIR "W:/ncnn/build_mw/install/lib/cmake/ncnn")
-find_package(NCNN REQUIRED)
-# include_directories(${NCNN_INCLUDE_DIRS})
-
-file(GLOB other_cpp src/*.cpp src/rife/*.cpp)
-
-# add_definitions(-D__STDC_CONSTANT_MACROS)
-# set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} -fopenmp)
-# link_libraries(avcodec avformat avutil)
-# link_libraries(ncnn SPIRV)
-
+file(GLOB_RECURSE other_cpp src/*.cpp)
 add_executable(HyVideo HyVideo.cpp ${other_cpp})
-target_link_libraries(HyVideo ncnn)
+
+target_link_libraries(HyVideo OpenMP::OpenMP_CXX ${FFMPEG_LIBRARIES} ${NCNN_LIBRARIES} glslang)
+
 
 # 查找所有 .comp 文件
 file(GLOB COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/rife/comps/*.comp")
@@ -47,7 +39,7 @@ foreach(comp_file IN LISTS COMP_FILES)
             -DSHADER_COMP_HEADER=${SHADER_COMP_HEADER}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/shader2header.cmake
         DEPENDS ${SHADER_SRC_ABS}
-        COMMENT "Converting ${comp_file} → ${fname_we}.comp.hex.h"
+        COMMENT "Converting ${comp_file} to ${fname_we}.comp.hex.h"
         VERBATIM
     )
 endforeach()
@@ -56,10 +48,3 @@ add_custom_target(GenerateShaderHeaders
 )
 # 确保在编译前生成头文件
 add_dependencies(HyVideo GenerateShaderHeaders)
-
-
-
-include(CTest)
-enable_testing()
-
-include(CPack)

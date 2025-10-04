@@ -1,16 +1,12 @@
 #ifndef SCORE_HPP
 #define SCORE_HPP 1
 
+#include <cstdint>
 #include <string>
 #include <vector>
-#include <fstream>
 #include <map>
-extern "C"{
-    #include "libavformat/avformat.h"
-    #include "libavcodec/avcodec.h"
-    #include "libavutil/imgutils.h"
-}
-#include "Common.hpp"
+#include <optional>
+
 enum ScoreType{
     MSE,SSIM
 };
@@ -24,18 +20,19 @@ private:
     ScoreType type;
     inline static const std::map<ScoreType,std::string> typestr={{MSE,"mse"},{SSIM,"ssim"}};
     double fps=0;
-    struct{
-        bool enable;
-        double value;
-    }Static={false,0}, Cut={false,0};
+    // struct{
+    //     bool enable;
+    //     double value;
+    // }Static={false,0}, Cut={false,0};
+    std::optional<double> Static,Cut;
 public:
     Score(const std::vector<double>& scores, ScoreType type=MSE);
     static Score LoadScob(std::string path);
     Score& setFPS(double fps){ this->fps=fps;return *this; }
-    Score& setStatic(double value){ Static={true, value};return *this; }
-    Score& setCut(double value){ Cut={true, value};return *this; }
+    Score& setStatic(double value){ Static=value;return *this; }
+    Score& setCut(double value){ Cut=value;return *this; }
     std::vector<double>& getScores(){ return scores; }
-    int Dump(uint8_t* output=nullptr);
+    int Dump(uint8_t* output=nullptr)const;
 };
 
 #endif //SCORE_HPP

@@ -1,4 +1,7 @@
 #include "Score.hpp"
+#include "Common.hpp"
+
+#include <fstream>
 
 using namespace std;
 
@@ -37,12 +40,12 @@ Score Score::LoadScob(std::string path){
             infile.read((char*)score.scores.data(), datasize);
         }
         else if(key=="STATIC"){
-            score.Static.enable=true;
-            infile.read((char*)&score.Static.value, sizeof(double));
+            score.Static.emplace();
+            infile.read((char*)&score.Static.value(), sizeof(double));
         }
         else if(key=="CUT"){
-            score.Cut.enable=true;
-            infile.read((char*)&score.Cut.value, sizeof(double));
+            score.Cut.emplace();
+            infile.read((char*)&score.Cut.value(), sizeof(double));
         }
         else infile.seekg(datasize, ios::cur);
     }
@@ -57,11 +60,11 @@ inline uint8_t* _write(uint8_t* output, const char *key, const void *data, uint3
     memcpy(output,data,datasize);
     return output+datasize;
 };
-int Score::Dump(uint8_t* output){
+int Score::Dump(uint8_t* output)const{
     uint32_t typelen = typestr.at(type).length();
     uint32_t scoresize = scores.size()*sizeof(double);
-    uint32_t StaticSize = Static.enable?11+sizeof(double):0;
-    uint32_t CutSize = Cut.enable?8+sizeof(double):0;
+    uint32_t StaticSize = Static?11+sizeof(double):0;
+    uint32_t CutSize = Cut?8+sizeof(double):0;
     int size=4+                 //MAGIC size 4
         9+typelen+              //\x04type\(typename_size[4B])(type name)
         16+                     //\x03fps\x00000008(STATIC_VALUE)
@@ -74,8 +77,8 @@ int Score::Dump(uint8_t* output){
         output = _write(output,"type",typestr.at(type).c_str(),typelen);
         output = _write(output,"fps",&fps,sizeof(double));
         output = _write(output,"scores",scores.data(),scoresize);
-        if(StaticSize) output = _write(output,"STATIC",&Static.value,sizeof(double));
-        if(CutSize) output = _write(output,"CUT",&Cut.value,sizeof(double));
+        if(StaticSize) output = _write(output,"STATIC",&Static.value(),sizeof(double));
+        if(CutSize) output = _write(output,"CUT",&Cut.value(),sizeof(double));
     }
     return size;
 }

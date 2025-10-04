@@ -19,13 +19,10 @@ bool VideoFrameReader::_NextVideoPacket(){
     }
 }
 
-VideoFrameReader::VideoFrameReader(InputVideo& vd, int vs_index){
+VideoFrameReader::VideoFrameReader(InputVideo& vd){
     if(!vd.is_open) vd.OpenInput();
     fmt_ctx=vd.fmt_ctx;
-    if(vs_index<0){
-        AssertI(vs_index=av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO,-1,-1,NULL,0));
-    }
-    this->vs_index=vs_index;
+    vs_index=vd.v_stream->index;
     AssertP(ctx=avcodec_alloc_context3(vd.codec));
     Assert(avcodec_parameters_to_context(ctx, vd.v_stream->codecpar));
     ctx->thread_count=cpu_num;
@@ -57,7 +54,5 @@ AVFrame* VideoFrameReader::NextFrame(AVFrame *fr){
             Assert(ret);
         }
     }
-    
-    
     return fr;
 }

@@ -2,6 +2,7 @@
 #include <vector>
 #include <thread>
 #include <omp.h>
+#include "Common.hpp"
 #include "Task.hpp"
 
 using namespace std;
