@@ -1,7 +1,4 @@
 #include "InputVideo.hpp"
-extern "C"{
-    #include "libavutil/imgutils.h"
-}
 
 #include "Common.hpp"
 
@@ -29,6 +26,8 @@ void InputVideo::OpenInput(){
             codec = avcodec_find_decoder(stream->codecpar->codec_id);
             pix_fmt = (AVPixelFormat)v_stream->codecpar->format;
             num_frames = v_stream->nb_frames;
+            sar=v_stream->sample_aspect_ratio;
+            if(sar.num<=0) sar={1,1};
             if(!num_frames) num_frames=v_stream->duration*av_q2d(fps)*av_q2d(v_stream->time_base);
         }else if(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO){
             a_streams.push_back(stream);
@@ -40,7 +39,11 @@ void InputVideo::OpenInput(){
 
 void InputVideo::Print(){
     if(!is_open) OpenInput();
-    printf("%dx%d(Rate:%.3lf,codec:%s)\n",width,height,av_q2d(fps),codec->long_name);
-    AVCodecParameters *param = v_stream->codecpar;
-    printf("FrameSize:%d bytes\n",av_image_get_buffer_size((AVPixelFormat)param->format,param->width,param->height,1));
+    AvLog("%dx%d(Rate:%.3lf,codec:%s)\n",width,height,av_q2d(fps),codec->long_name);
+    AvLog("Duration:%d(base:%d/%d)\n",fmt_ctx->duration, 1, AV_TIME_BASE);
+    AvLog("VStream Duration:%d(base:%d/%d)\n",v_stream->duration, v_stream->time_base.num, v_stream->time_base.den);
+    for(int i=0; i<a_streams.size() ; ++i){
+        auto& as=a_streams[i];
+        AvLog("AStream%d Duration:%d(base:%d/%d)\n",i, as->duration, as->time_base.num, as->time_base.den);
+    }
 }

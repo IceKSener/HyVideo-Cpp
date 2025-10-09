@@ -1,21 +1,28 @@
 #ifndef VIDEOFRAMEREADER_HPP
 #define VIDEOFRAMEREADER_HPP 1
 
-#include "Common.hpp"
 #include "IFrameGetter.hpp"
 #include "InputVideo.hpp"
+#include "PacketReader.hpp"
 
 class VideoFrameReader:public IFreamGetter{
 private:
-    AVFormatContext *fmt_ctx;
+    bool is_end=false;
     AVCodecContext *ctx = nullptr;
     AVPacket *pkt = nullptr;
     AVFrame *fr = nullptr;
-    int vs_index = -1;
-    bool _NextVideoPacket();
+    PacketReader *pkt_reader = nullptr;
 public:
-    VideoFrameReader(InputVideo& vd);
+    /*
+    * 创建视频的帧读取类
+    * @param vd 输入的视频
+    * @param manual 为true时需要手动添加Packet
+    */
+    VideoFrameReader(InputVideo& vd, bool manual=false);
     ~VideoFrameReader();
+    // 添加Packet，不会unref传入的pkt
+    VideoFrameReader& AddPacket(AVPacket *pkt);
+    // 读取视频下一帧，读不到（结束或需要Packet）则返回nullptr
     AVFrame* NextFrame(AVFrame *fr=nullptr) override;
 };
 

@@ -28,7 +28,6 @@ RifeFrameGetter::RifeFrameGetter(IFreamGetter *getter, const RifeArgs& args):get
 }
 
 RifeFrameGetter::~RifeFrameGetter(){
-    if(getter) delete getter;
     if(f0) av_frame_free(&f0);
     if(f1) av_frame_free(&f1);
 }

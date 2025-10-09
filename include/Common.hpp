@@ -4,6 +4,7 @@
 #include <cstdint>
 extern "C"{
     #include "libavutil/avutil.h"
+    #include "libavcodec/avcodec.h"
 }
 #include <vector>
 #include <filesystem>
@@ -31,5 +32,6 @@ std::vector<std::string> strsplit(std::string str, const std::string& c);
 std::string withsuffix(const std::string& file, const std::string& suffix);
 bool isfile(const std::filesystem::path& path);
 bool findConf(std::filesystem::path& out, const std::string& name,const std::filesystem::path& dir);
+const AVCodec* searchEncoder(const std::string& codec_name);
 
 #endif //COMMON_HPP

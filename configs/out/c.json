@@ -1,0 +1,15 @@
+{
+    "type":"out",
+    "targets":[
+        {
+            "coder" : "hevc",
+            "crf" : 28,
+            "format":"mp4",
+            "pix_fmt":"yuv420p",
+            "ext" : "test",
+            "faststart":true,
+            "maxw":500,
+            "maxh":500
+        }
+    ]
+}

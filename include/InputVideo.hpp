@@ -11,13 +11,14 @@ extern "C"{
 class InputVideo{
 friend class OutputVideo;
 friend class Task;
+friend class PacketReader;
+friend class PacketWriter;
 friend class VideoFrameReader;
-friend class VideoFrameWriter;
 private:
     std::string path;
     bool is_open = false;
     int width=0, height=0;
-    AVRational fps={0,1};
+    AVRational fps={0,1}, sar={1,1};
     int num_frames=0;    //不一定准确
     AVPixelFormat pix_fmt;
     

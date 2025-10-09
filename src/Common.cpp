@@ -71,6 +71,7 @@ bool findConf(fs::path& out, const string &name, const fs::path& dir){
     }
     for(const auto& entry: fs::recursive_directory_iterator(dir)){
         if(!entry.is_directory()) continue;
+        auto& dir=entry.path();
         if(isfile(dir/name)){
             out=dir/name;
             return true;
@@ -80,4 +81,10 @@ bool findConf(fs::path& out, const string &name, const fs::path& dir){
         }
     }
     return false;
+}
+const AVCodec* searchEncoder(const std::string &codec_name){
+    const AVCodec *codec = avcodec_find_encoder_by_name(codec_name.c_str());
+    if(!codec) codec = avcodec_find_decoder_by_name(codec_name.c_str());
+    if(!codec) ThrowErr("找不到编码器"+codec_name);
+    return avcodec_find_encoder(codec->id);
 }
