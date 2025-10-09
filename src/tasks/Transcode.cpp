@@ -204,6 +204,7 @@ bool Task::_taskTranscode(){
         map<fs::path,bool> exist_files;
         vector<OutputVideo> outputs;
         vector<PacketWriter> writers;
+        vector<FrameConvert> converters;
         for(auto& target:targets){
             // 计算输出路径
             fs::path path=vd_in.path;
@@ -249,6 +250,7 @@ bool Task::_taskTranscode(){
                 h=round(h/ALIGN)*ALIGN;
 
                 vd_out.SetWxH(w, h);
+                converters.emplace_back(outw,outh,w,h,vd_in.pix_fmt,vd_out.pix_fmt);
             }
 
             for(auto& a_stream:vd_in.a_streams)
@@ -262,6 +264,7 @@ bool Task::_taskTranscode(){
         AVPacket* pkt=nullptr;
         AVFrame* fr=nullptr;
         PacketWriter *pw=writers.data();
+        FrameConvert *fc=converters.data();
         int frame_num=0;
         AVMediaType type;
         while(pkt=pkt_reader.NextPacket()){
@@ -270,7 +273,7 @@ bool Task::_taskTranscode(){
                 vfr->AddPacket(pkt);
                 while(fr=frameReader->NextFrame(fr)){
                     for(int j=0 ; j<num_out ; ++j)
-                        pw[j].SendVideoFrame(fr);
+                        pw[j].SendVideoFrame(fc[i].Convert(fr));
                     ++frame_num;
                 }
             }else if(type==AVMEDIA_TYPE_AUDIO){
@@ -283,7 +286,7 @@ bool Task::_taskTranscode(){
         vfr->AddPacket(NULL);
         while(fr=frameReader->NextFrame(fr)){
             for(int j=0 ; j<num_out ; ++j)
-                pw[j].SendVideoFrame(fr);
+                pw[j].SendVideoFrame(fc[i].Convert(fr));
             ++frame_num;
         }
         for(int j=0 ; j<num_out ; ++j)

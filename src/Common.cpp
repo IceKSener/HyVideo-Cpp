@@ -57,7 +57,7 @@ string withsuffix(const string& file, const string& suffix){
     if((index=filename.rfind('.'))>=0) filename=filename.substr(0,index+1);
     return path.append(filename).append(suffix);
 }
-inline bool isfile(const fs::path& path){
+bool isfile(const fs::path& path){
     return fs::is_regular_file(path);
 }
 bool findConf(fs::path& out, const string &name, const fs::path& dir){
