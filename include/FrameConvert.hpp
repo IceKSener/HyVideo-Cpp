@@ -11,6 +11,7 @@ private:
     const AVPixelFormat from,to;
 public:
     FrameConvert(int w, int h, AVPixelFormat from, AVPixelFormat to);
+    FrameConvert(FrameConvert&& fc);
     ~FrameConvert();
     AVFrame* Convert(AVFrame *fr);
 };

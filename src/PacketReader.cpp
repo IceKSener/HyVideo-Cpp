@@ -7,6 +7,12 @@ PacketReader::PacketReader(InputVideo &vd){
     fmt_ctx=vd.fmt_ctx;
 }
 
+PacketReader::PacketReader(PacketReader &&pr){
+    fmt_ctx=pr.fmt_ctx;
+    pkt=pr.pkt;
+    pr.pkt=nullptr;
+}
+
 PacketReader::~PacketReader(){
     if(pkt) av_packet_free(&pkt);
 }

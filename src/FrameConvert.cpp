@@ -11,6 +11,11 @@ FrameConvert::FrameConvert(int w, int h, AVPixelFormat from, AVPixelFormat to):f
         AssertP(sws_ctx=sws_getContext(w,h,from,w,h,to,SWS_BILINEAR,NULL,NULL,NULL));
 }
 
+FrameConvert::FrameConvert(FrameConvert &&fc):from(fc.from),to(fc.to){
+    sws_ctx=fc.sws_ctx;
+    fc.sws_ctx=nullptr;
+}
+
 FrameConvert::~FrameConvert(){
     if(sws_ctx) sws_freeContext(sws_ctx);
 }

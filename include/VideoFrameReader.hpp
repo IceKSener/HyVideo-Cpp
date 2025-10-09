@@ -12,6 +12,9 @@ private:
     AVPacket *pkt = nullptr;
     AVFrame *fr = nullptr;
     PacketReader *pkt_reader = nullptr;
+    
+    VideoFrameReader(const VideoFrameReader& vfr)=default;
+    VideoFrameReader& operator=(const VideoFrameReader& vfr)=default;
 public:
     /*
     * 创建视频的帧读取类
@@ -19,6 +22,7 @@ public:
     * @param manual 为true时需要手动添加Packet
     */
     VideoFrameReader(InputVideo& vd, bool manual=false);
+    VideoFrameReader(VideoFrameReader&& vfr);
     ~VideoFrameReader();
     // 添加Packet，不会unref传入的pkt
     VideoFrameReader& AddPacket(AVPacket *pkt);

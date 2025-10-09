@@ -17,7 +17,12 @@ VideoFrameReader::VideoFrameReader(InputVideo &vd, bool manual){
     //DEBUG
     av_log(NULL, AV_LOG_INFO, "视频元数据[帧数:%d]\n",vd.num_frames);
 }
-VideoFrameReader::~VideoFrameReader(){
+VideoFrameReader::VideoFrameReader(VideoFrameReader &&vfr){
+    *this=vfr;
+    memset(&vfr, 0, sizeof(vfr));
+}
+VideoFrameReader::~VideoFrameReader()
+{
     if(fr) av_frame_free(&fr);
     if(pkt) av_packet_free(&pkt);
     if(ctx) avcodec_free_context(&ctx);

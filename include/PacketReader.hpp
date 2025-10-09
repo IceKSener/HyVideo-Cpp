@@ -12,6 +12,7 @@ private:
     AVFormatContext *fmt_ctx;
 public:
     PacketReader(InputVideo& vd);
+    PacketReader(PacketReader&& pr);
     ~PacketReader();
     //读取文件的下一个Packet，结束则返回nullptr
     AVPacket* NextPacket(AVPacket *pkt=nullptr);

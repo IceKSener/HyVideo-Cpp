@@ -201,11 +201,9 @@ bool Task::_taskTranscode(){
             ThrowErr("暂不支持补帧");
         }
 
-        //TODO 构造输出视频
         map<fs::path,bool> exist_files;
         vector<OutputVideo> outputs;
         vector<PacketWriter> writers;
-        writers.reserve(num_out);//TODO 移动构造
         for(auto& target:targets){
             // 计算输出路径
             fs::path path=vd_in.path;

@@ -20,10 +20,6 @@ private:
     ScoreType type;
     inline static const std::map<ScoreType,std::string> typestr={{MSE,"mse"},{SSIM,"ssim"}};
     double fps=0;
-    // struct{
-    //     bool enable;
-    //     double value;
-    // }Static={false,0}, Cut={false,0};
     std::optional<double> Static,Cut;
 public:
     Score(const std::vector<double>& scores, ScoreType type=MSE);

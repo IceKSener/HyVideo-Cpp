@@ -22,7 +22,12 @@ PacketWriter::PacketWriter(OutputVideo &vd, InputVideo &vd_in):PacketWriter(vd){
         stream_mapping[vd_in.a_streams[i]->index] = vd.a_streams[i]->index;
     }
 }
-PacketWriter::~PacketWriter(){
+PacketWriter::PacketWriter(PacketWriter &&w){
+    *this=w;
+    memset(&w, 0, sizeof(w));
+}
+PacketWriter::~PacketWriter()
+{
     if(ctx) avcodec_free_context(&ctx);
     if(pkt_buf) av_packet_free(&pkt_buf);
     if(pkt_ref) av_packet_free(&pkt_ref);
