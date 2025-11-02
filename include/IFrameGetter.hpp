@@ -7,7 +7,9 @@ extern "C"{
 
 class IFreamGetter{
 public:
-    virtual AVFrame* NextFrame(AVFrame*) = 0;
+    virtual AVFrame* NextFrame(AVFrame *fr=nullptr) = 0;
+    //获取下一帧为null时使用IsEnd查看是否结束
+    virtual bool IsEnd() = 0;
 };
 
 #endif //IFRAMEGETTER_HPP

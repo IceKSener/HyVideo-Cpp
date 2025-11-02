@@ -5,6 +5,11 @@
 
 using namespace std;
 
+#define MSE_STATIC_DEF 10
+#define MSE_CUT_DEF 1000
+#define SSIM_STATIC_DEF 0.995
+#define SSIM_CUT_DEF -0.2
+
 Score::Score(const std::vector<double>& scores, ScoreType type):scores(scores),type(type){ }
 Score Score::LoadScob(std::string path){
     ifstream infile(path,ios::binary);
@@ -60,7 +65,37 @@ inline uint8_t* _write(uint8_t* output, const char *key, const void *data, uint3
     memcpy(output,data,datasize);
     return output+datasize;
 };
-int Score::Dump(uint8_t* output)const{
+std::vector<int8_t> Score::CalcProcess()const{
+    int len = scores.size();
+    if(len<=1) return std::vector<int8_t>();
+    std::vector<int8_t> _process(len,0);
+    int8_t *process=_process.data();
+    const double *score=scores.data();
+    double newScore[3];
+    newScore[0]=score[0];
+    newScore[1]=score[1];
+    #define pS (newScore[i%3])
+    #define cS (newScore[(i+1)%3])
+    #define nS (newScore[(i+2)%3])
+    if(type==MSE){
+        double STATIC = Static.value_or(MSE_STATIC_DEF);
+        double CUT = Cut.value_or(MSE_CUT_DEF);
+        int i=0;
+        for(; i<len-2 ; ++i){
+            nS=score[i+2];
+            if(cS<=STATIC && pS>STATIC && nS>STATIC){
+                cS=pS; process[i+1]=-1;
+            }else if(cS-pS>CUT) process[i+1]=1;
+        }
+        if(cS-pS>CUT)
+            process[i+1]=1;
+    }
+    #undef pS
+    #undef cS
+    #undef nS
+    return _process;
+}
+int Score::Dump(uint8_t *output) const{
     uint32_t typelen = typestr.at(type).length();
     uint32_t scoresize = scores.size()*sizeof(double);
     uint32_t StaticSize = Static?11+sizeof(double):0;

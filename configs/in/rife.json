@@ -1,0 +1,11 @@
+{
+    "type":"in",
+    "interpolation":{
+        "enable" : true,
+        "engine" : "rife",
+        "use_gpu" : true,
+        "model" : "rife-v4.22-lite",
+        "process" : true,
+        "target_fps" : 60
+    }
+}

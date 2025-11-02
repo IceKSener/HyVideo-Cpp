@@ -44,8 +44,11 @@ void analyzeTask(string str, TaskType& tasktype, TaskArgs& typeargs){
     }
     typeargs=args;
 }
+static void test(){
+}
 
 int main(int argc, char *argv[]){
+    test();
     ArgsParser ap(argc, argv);
     cpu_num=thread::hardware_concurrency();
     omp_set_num_threads(cpu_num);
@@ -76,6 +79,10 @@ int main(int argc, char *argv[]){
     }catch(string errMsg){
         av_log(NULL, AV_LOG_ERROR, "%s\n", errMsg.c_str());
         return -1;
+    }catch(exception e){
+        av_log(NULL, AV_LOG_ERROR, "%s\n", e.what());
+        return -1;
     }
+    AvLog("结束\n");
     return 0;
 }

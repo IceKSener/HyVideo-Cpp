@@ -24,8 +24,7 @@
 
 DEFINE_LAYER_CREATOR(Warp)
 
-RIFE::RIFE(int gpuid, bool _tta_mode, bool _tta_temporal_mode, bool _uhd_mode, int _num_threads, bool _rife_v2, bool _rife_v4, int _padding)
-{
+RIFE::RIFE(int gpuid, bool _tta_mode, bool _tta_temporal_mode, bool _uhd_mode, int _num_threads, bool _rife_v2, bool _rife_v4, int _padding){
     vkdev = gpuid == -1 ? 0 : ncnn::get_gpu_device(gpuid);
 
     rife_preproc = 0;
@@ -47,8 +46,7 @@ RIFE::RIFE(int gpuid, bool _tta_mode, bool _tta_temporal_mode, bool _uhd_mode, i
     padding = _padding;
 }
 
-RIFE::~RIFE()
-{
+RIFE::~RIFE(){
     // cleanup preprocess and postprocess pipeline
     {
         delete rife_preproc;
@@ -79,46 +77,41 @@ RIFE::~RIFE()
 }
 
 #if _WIN32
-static void load_param_model(ncnn::Net& net, const std::wstring& modeldir, const wchar_t* name)
-{
-    wchar_t parampath[256];
-    wchar_t modelpath[256];
-    swprintf(parampath, 256, L"%s/%s.param", modeldir.c_str(), name);
-    swprintf(modelpath, 256, L"%s/%s.bin", modeldir.c_str(), name);
+static bool load_param_model(ncnn::Net& net, const std::wstring& modeldir, const wchar_t* name){
+    std::wstring parampath=modeldir+L"/"+name+L".param";
+    std::wstring modelpath=modeldir+L"/"+name+L".bin";
 
     {
-        FILE* fp = _wfopen(parampath, L"rb");
+        FILE* fp = _wfopen(parampath.c_str(), L"rb");
         if (!fp)
         {
-            fwprintf(stderr, L"_wfopen %ls failed\n", parampath);
+            fwprintf(stderr, L"_wfopen %ls failed\n", parampath.c_str());
+            return false;
         }
-
         net.load_param(fp);
-
         fclose(fp);
     }
     {
-        FILE* fp = _wfopen(modelpath, L"rb");
+        FILE* fp = _wfopen(modelpath.c_str(), L"rb");
         if (!fp)
         {
-            fwprintf(stderr, L"_wfopen %ls failed\n", modelpath);
+            fwprintf(stderr, L"_wfopen %ls failed\n", modelpath.c_str());
+            return false;
         }
-
         net.load_model(fp);
-
         fclose(fp);
     }
+    return true;
 }
 #else
-static void load_param_model(ncnn::Net& net, const std::string& modeldir, const char* name)
-{
+static void load_param_model(ncnn::Net& net, const std::string& modeldir, const char* name){
     char parampath[256];
     char modelpath[256];
     sprintf(parampath, "%s/%s.param", modeldir.c_str(), name);
     sprintf(modelpath, "%s/%s.bin", modeldir.c_str(), name);
 
-    net.load_param(parampath);
-    net.load_model(modelpath);
+    if(net.load_param(parampath) || net.load_model(modelpath)) return false;
+    return true;
 }
 #endif
 
@@ -149,18 +142,18 @@ int RIFE::load(const std::string& modeldir)
     fusionnet.register_custom_layer("rife.Warp", Warp_layer_creator);
 
 #if _WIN32
-    load_param_model(flownet, modeldir, L"flownet");
+    if(!load_param_model(flownet, modeldir, L"flownet")) return -1;
     if (!rife_v4)
     {
-        load_param_model(contextnet, modeldir, L"contextnet");
-        load_param_model(fusionnet, modeldir, L"fusionnet");
+        if(!load_param_model(contextnet, modeldir, L"contextnet")) return -1;
+        if(!load_param_model(fusionnet, modeldir, L"fusionnet")) return -1;
     }
 #else
-    load_param_model(flownet, modeldir, "flownet");
+    if(!load_param_model(flownet, modeldir, "flownet")) return -1;
     if (!rife_v4)
     {
-        load_param_model(contextnet, modeldir, "contextnet");
-        load_param_model(fusionnet, modeldir, "fusionnet");
+        if(!load_param_model(contextnet, modeldir, "contextnet")) return -1;
+        if(!load_param_model(fusionnet, modeldir, "fusionnet")) return -1;
     }
 #endif
 
@@ -168,11 +161,7 @@ int RIFE::load(const std::string& modeldir)
     if (vkdev)
     {
         std::vector<ncnn::vk_specialization_type> specializations(1);
-#if _WIN32
-        specializations[0].i = 1;
-#else
         specializations[0].i = 0;
-#endif
 
         {
             static std::vector<uint32_t> spirv;
@@ -379,32 +368,30 @@ int RIFE::load(const std::string& modeldir)
     return 0;
 }
 
-int RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
+ncnn::Mat RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
 {
-    if (!vkdev)
-    {
-        // cpu only
-        if (rife_v4)
-            return process_v4_cpu(in0image, in1image, timestep, outimage);
+    if(timestep == 0.f){
+        return in0image;
+    }else if(timestep == 1.f){
+        return in1image;
+    }
+
+    if(rife_v4){
+        if(vkdev)
+            process_v4_gpu(in0image, in1image, timestep, outimage);
         else
-            return process_cpu(in0image, in1image, timestep, outimage);
+            process_v4_cpu(in0image, in1image, timestep, outimage);
+    }else{
+        if(vkdev)
+            process_gpu(in0image, in1image, timestep, outimage);
+        else
+            process_cpu(in0image, in1image, timestep, outimage);
     }
+    return outimage;
+}
 
-    if (rife_v4)
-        return process_v4(in0image, in1image, timestep, outimage);
-
-    if (timestep == 0.f)
-    {
-        outimage = in0image;
-        return 0;
-    }
-
-    if (timestep == 1.f)
-    {
-        outimage = in1image;
-        return 0;
-    }
-
+int RIFE::process_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
+{
     const unsigned char* pixel0data = (const unsigned char*)in0image.data;
     const unsigned char* pixel1data = (const unsigned char*)in1image.data;
     const int w = in0image.w;
@@ -436,13 +423,8 @@ int RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float ti
     }
     else
     {
-#if _WIN32
-        in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_BGR2RGB, w, h);
-        in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_BGR2RGB, w, h);
-#else
         in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_RGB, w, h);
         in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_RGB, w, h);
-#endif
     }
 
     ncnn::VkCompute cmd(vkdev);
@@ -1198,11 +1180,7 @@ int RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float ti
 
         if (!(opt.use_fp16_storage && opt.use_int8_storage))
         {
-#if _WIN32
-            out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB2BGR);
-#else
             out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
-#endif
         }
     }
 
@@ -1214,18 +1192,6 @@ int RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float ti
 
 int RIFE::process_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
 {
-    if (timestep == 0.f)
-    {
-        outimage = in0image;
-        return 0;
-    }
-
-    if (timestep == 1.f)
-    {
-        outimage = in1image;
-        return 0;
-    }
-
     const unsigned char* pixel0data = (const unsigned char*)in0image.data;
     const unsigned char* pixel1data = (const unsigned char*)in1image.data;
     const int w = in0image.w;
@@ -2449,44 +2415,18 @@ int RIFE::process_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, floa
     }
 
     // download
-    {
-#if _WIN32
-        out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB2BGR);
-#else
-        out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
-#endif
-    }
+    out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
 
     return 0;
 }
 
-int RIFE::process_v4(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
+int RIFE::process_v4_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
 {
-    if (!vkdev)
-    {
-        // cpu only
-        return process_cpu(in0image, in1image, timestep, outimage);
-    }
-
-    if (timestep == 0.f)
-    {
-        outimage = in0image;
-        return 0;
-    }
-
-    if (timestep == 1.f)
-    {
-        outimage = in1image;
-        return 0;
-    }
-
     const unsigned char* pixel0data = (const unsigned char*)in0image.data;
     const unsigned char* pixel1data = (const unsigned char*)in1image.data;
     const int w = in0image.w;
     const int h = in0image.h;
-    const int channels = 3;//in0image.elempack;
-
-//     fprintf(stderr, "%d x %d\n", w, h);
+    const int channels = 3;
 
     ncnn::VkAllocator* blob_vkallocator = vkdev->acquire_blob_allocator();
     ncnn::VkAllocator* staging_vkallocator = vkdev->acquire_staging_allocator();
@@ -2513,13 +2453,8 @@ int RIFE::process_v4(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float
     }
     else
     {
-#if _WIN32
-        in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_BGR2RGB, w, h);
-        in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_BGR2RGB, w, h);
-#else
         in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_RGB, w, h);
         in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_RGB, w, h);
-#endif
     }
 
     ncnn::VkCompute cmd(vkdev);
@@ -3190,11 +3125,7 @@ int RIFE::process_v4(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float
 
         if (!(opt.use_fp16_storage && opt.use_int8_storage))
         {
-#if _WIN32
-            out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB2BGR);
-#else
             out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
-#endif
         }
     }
 
@@ -3206,25 +3137,11 @@ int RIFE::process_v4(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float
 
 int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
 {
-    if (timestep == 0.f)
-    {
-        outimage = in0image;
-        return 0;
-    }
-
-    if (timestep == 1.f)
-    {
-        outimage = in1image;
-        return 0;
-    }
-
     const unsigned char* pixel0data = (const unsigned char*)in0image.data;
     const unsigned char* pixel1data = (const unsigned char*)in1image.data;
     const int w = in0image.w;
     const int h = in0image.h;
-    const int channels = 3;//in0image.elempack;
-
-//     fprintf(stderr, "%d x %d\n", w, h);
+    const int channels = 3;
 
     ncnn::Option opt = flownet.opt;
 
@@ -3236,13 +3153,8 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
     ncnn::Mat in0;
     ncnn::Mat in1;
     {
-#if _WIN32
-        in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_BGR2RGB, w, h);
-        in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_BGR2RGB, w, h);
-#else
         in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_RGB, w, h);
         in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_RGB, w, h);
-#endif
     }
 
     ncnn::Mat out;
@@ -4391,15 +4303,7 @@ int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
             }
         }
     }
-
-    // download
-    {
-#if _WIN32
-        out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB2BGR);
-#else
-        out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
-#endif
-    }
+    out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
 
     return 0;
 }

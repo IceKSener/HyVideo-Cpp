@@ -7,8 +7,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/out/build/UCRT64/HyVideo.exe",
             "args": [
-                ":transcode:conf_out=b;c",
-                "W:/test_a.mp4"
+                ":transcode:conf_out=vo",
+                "W:/test_s.mp4"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

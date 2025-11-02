@@ -6,6 +6,7 @@
 extern "C"{
     #include "libavformat/avformat.h"
     #include "libavcodec/avcodec.h"
+    #include "libavcodec/defs.h"
 }
 
 class PacketWriter{
@@ -20,6 +21,7 @@ private:
     PacketWriter& operator=(const PacketWriter& v)=default;
 public:
     PacketWriter(OutputVideo& vd);
+    // 附带流索引映射
     PacketWriter(OutputVideo& vd, InputVideo& vd_in);
     PacketWriter(PacketWriter&& w);
     ~PacketWriter();

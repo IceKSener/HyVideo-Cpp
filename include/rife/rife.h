@@ -19,16 +19,18 @@ public:
 #else
     int load(const std::string& modeldir);
 #endif
+    // 接收RGBRGBRGB输入
+    ncnn::Mat process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
 
-    int process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
 
-    int process_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
-
-    int process_v4(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
-
-    int process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+    // int process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
 
 private:
+    int process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+    int process_v4_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+    int process_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+    int process_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+
     ncnn::VulkanDevice* vkdev;
     ncnn::Net flownet;
     ncnn::Net contextnet;
@@ -50,6 +52,9 @@ private:
     bool rife_v2;
     bool rife_v4;
     int padding;
+    
+    //为连续补帧做的缓存
+    // const uint8_t* pre
 };
 
 #endif // RIFE_H

@@ -8,8 +8,7 @@
             "pix_fmt":"yuv420p",
             "ext" : "vo",
             "faststart":true,
-            "maxw":500,
-            "maxh":500
+            "limit_size":1
         }
     ]
 }

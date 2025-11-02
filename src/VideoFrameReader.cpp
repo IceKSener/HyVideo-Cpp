@@ -11,6 +11,7 @@ VideoFrameReader::VideoFrameReader(InputVideo &vd, bool manual){
     AssertP(ctx=avcodec_alloc_context3(vd.codec));
     Assert(avcodec_parameters_to_context(ctx, vd.v_stream->codecpar));
     ctx->thread_count=cpu_num;
+    ctx->time_base=vd.v_stream->time_base;
     Assert(avcodec_open2(ctx, vd.codec, NULL));
     AssertP(pkt=av_packet_alloc());
     AssertP(fr=av_frame_alloc());
@@ -52,6 +53,7 @@ AVFrame* VideoFrameReader::NextFrame(AVFrame *fr){
             }
             else return nullptr;
         case 0:
+            fr->time_base=ctx->time_base;
             return fr;
         case AVERROR_EOF:
             return nullptr;

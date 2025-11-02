@@ -77,7 +77,8 @@
         "queue": "cpp",
         "stack": "cpp",
         "valarray": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "netfwd": "cpp"
     },
     "cmake.parallelJobs": 8,
     "cmake.buildArgs": ["--parallel"]

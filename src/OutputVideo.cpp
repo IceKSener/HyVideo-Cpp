@@ -12,7 +12,11 @@ OutputVideo::OutputVideo(OutputVideo&& vd){
 }
 
 OutputVideo::~OutputVideo(){
-    if(fmt_ctx) avformat_free_context(fmt_ctx);
+    if(fmt_ctx){
+        if(!(fmt_ctx->oformat->flags&AVFMT_NOFILE))
+            avio_closep(&fmt_ctx->pb);
+        avformat_free_context(fmt_ctx);
+    }
 }
 
 OutputVideo& OutputVideo::CopyVStreamParam(AVStream *vs_in){
@@ -32,11 +36,12 @@ OutputVideo& OutputVideo::InitOutput(){
     Assert(avformat_alloc_output_context2(&fmt_ctx,NULL,format.empty()?NULL:format.c_str(),path.c_str()));
     AssertP(v_stream=avformat_new_stream(fmt_ctx, NULL));
 
-    AVCodecParameters& codecpar = *v_stream->codecpar;
-    codecpar.codec_id=codec->id;
-    codecpar.codec_type=AVMEDIA_TYPE_VIDEO;
-    codecpar.width=width; codecpar.height=height;
-    codecpar.format=pix_fmt;
+    // AVCodecParameters& codecpar = *v_stream->codecpar;
+    // codecpar.codec_id=codec->id;
+    // codecpar.codec_type=AVMEDIA_TYPE_VIDEO;
+    // codecpar.width=width; codecpar.height=height;
+    // codecpar.format=pix_fmt;
+    // codecpar.bit_rate=0;
     v_stream->avg_frame_rate=fps;
     v_stream->time_base=vs_timebase;
 

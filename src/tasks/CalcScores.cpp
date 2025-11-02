@@ -70,9 +70,9 @@ bool Task::_taskCalcScores(){
         if(type==ScoreType::MSE) scoreValues=CalcMSE(vd);
         // else if();
         Score score(scoreValues, type);
-        score.setFPS(av_q2d(vd.fps));
-        if(args["static"].has_value()) score.setStatic(getReal(args,"static"));
-        if(args["cut"].has_value()) score.setStatic(getReal(args,"cut"));
+        score.SetFPS(av_q2d(vd.fps));
+        if(args["static"].has_value()) score.SetStatic(getReal(args,"static"));
+        if(args["cut"].has_value()) score.SetStatic(getReal(args,"cut"));
         writeScoreToFile(vd.path+".scob", score, coverAll);
     }
     return true;

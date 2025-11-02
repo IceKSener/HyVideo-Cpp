@@ -27,7 +27,7 @@ void InputVideo::OpenInput(){
             pix_fmt = (AVPixelFormat)v_stream->codecpar->format;
             num_frames = v_stream->nb_frames;
             sar=v_stream->sample_aspect_ratio;
-            if(sar.num<=0) sar={1,1};
+            if(sar.num<=0) sar={1,1};//TODO 可能bug？
             if(!num_frames) num_frames=v_stream->duration*av_q2d(fps)*av_q2d(v_stream->time_base);
         }else if(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO){
             a_streams.push_back(stream);

@@ -16,8 +16,11 @@ include_directories(${FFMPEG_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS})
 
 file(GLOB_RECURSE other_cpp src/*.cpp)
 add_executable(HyVideo HyVideo.cpp ${other_cpp})
+add_executable(Test Test.cpp)
 
 target_link_libraries(HyVideo OpenMP::OpenMP_CXX ${FFMPEG_LIBRARIES} ${NCNN_LIBRARIES} glslang)
+target_link_libraries(Test ${FFMPEG_LIBRARIES})
+target_sources(Test PRIVATE src/Common.cpp)
 
 
 # 查找所有 .comp 文件

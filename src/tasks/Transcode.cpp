@@ -44,12 +44,12 @@ struct _process{
         void *args;
         ~_interpolation(){
             if(!args) return;
-            if(engine=="rife") delete (RifeArgs*)args;
+            if(engine=="rife") delete (RifeFrameGetter::Args*)args;
         }
     };
     optional<_upscale> upscale;
     optional<_interpolation> interpolation;
-}processes;
+};
 
 // 从配置文件夹中读取配置
 json ReadConf(const string& conf, const string& conf_dir=conf_dir){
@@ -139,30 +139,31 @@ static _process ReadProcess(const string& conf_str){
             if(conf["upscale"]["enable"].is_boolean()){
                 auto& json_v=conf["upscale"];
                 if(json_v["enable"]){
-                    auto& pro_v=processes.upscale.emplace();
+                    auto& pro_v=process.upscale.emplace();
                     pro_v.engine=json_v.value("engine", "real-cugan");
                     pro_v.use_gpu=json_v.value("use_gpu", false);
                     pro_v.model=json_v.value("model", "models-nose");
                     pro_v.upscale=json_v.value("upscale", 2);
                     pro_v.denoise=json_v.value("denoise", 0);
                 }else{
-                    processes.upscale.reset();
+                    process.upscale.reset();
                 }
             }
             if(conf["interpolation"]["enable"].is_boolean()){
                 auto& json_v=conf["interpolation"];
                 if(json_v["enable"]){
-                    auto& pro_v=processes.interpolation.emplace();
+                    auto& pro_v=process.interpolation.emplace();
                     pro_v.engine=tolower((string)json_v["engine"]);
                     pro_v.process=json_v.value("process", true);
                     pro_v.target_fps=json_v.value("target_fps", 60);
                     if(pro_v.engine=="rife"){
-                        RifeArgs *args=new RifeArgs;
+                        RifeFrameGetter::Args *args=new RifeFrameGetter::Args;
                         args->use_gpu=json_v.value("use_gpu", true);
                         args->model=json_v.value("model", "rife-v4.22-lite");
+                        pro_v.args=args;
                     }
                 }else{
-                    processes.interpolation.reset();
+                    process.interpolation.reset();
                 }
             }
         }catch(string err){
@@ -198,7 +199,23 @@ bool Task::_taskTranscode(){
             ThrowErr("暂不支持超分");
         }
         if(process_cfg.interpolation){
-            ThrowErr("暂不支持补帧");
+            auto& cfg=process_cfg.interpolation.value();
+            if(cfg.engine=="rife"){
+                auto rifeGetter=make_shared<RifeFrameGetter>(frameReader,*(RifeFrameGetter::Args*)cfg.args);
+                AVRational fpsx=av_div_q(av_d2q(cfg.target_fps, 1000000),{(int)round(av_q2d(vd_in.fps)),1});
+                outfps=av_mul_q(outfps,fpsx);
+                rifeGetter->SetFPSX(fpsx);
+                if(cfg.process){
+                    string scob_path=vd_in.path+".scob";
+                    try{
+                        Score s=Score::LoadScob(scob_path);
+                        rifeGetter->SetProcess(true,&s);
+                    }catch(...){
+                        AvLog("文件%s打开失败，跳过帧处理",scob_path.c_str());
+                    }
+                }
+                frameReader=rifeGetter;
+            }
         }
 
         map<fs::path,bool> exist_files;
@@ -250,7 +267,7 @@ bool Task::_taskTranscode(){
                 h=round(h/ALIGN)*ALIGN;
 
                 vd_out.SetWxH(w, h);
-                converters.emplace_back(outw,outh,w,h,vd_in.pix_fmt,vd_out.pix_fmt);
+                converters.emplace_back(w,h,vd_out.pix_fmt);
             }
 
             for(auto& a_stream:vd_in.a_streams)
@@ -271,7 +288,8 @@ bool Task::_taskTranscode(){
             type=vd_in.fmt_ctx->streams[pkt->stream_index]->codecpar->codec_type;
             if(type==AVMEDIA_TYPE_VIDEO){
                 vfr->AddPacket(pkt);
-                while(fr=frameReader->NextFrame(fr)){
+                while(fr=frameReader->NextFrame()){
+                    fr->pict_type=AVPictureType::AV_PICTURE_TYPE_NONE;
                     for(int j=0 ; j<num_out ; ++j)
                         pw[j].SendVideoFrame(fc[i].Convert(fr));
                     ++frame_num;
@@ -284,7 +302,8 @@ bool Task::_taskTranscode(){
             av_packet_unref(pkt);
         }
         vfr->AddPacket(NULL);
-        while(fr=frameReader->NextFrame(fr)){
+        while(fr=frameReader->NextFrame()){
+            fr->pict_type=AVPictureType::AV_PICTURE_TYPE_NONE;
             for(int j=0 ; j<num_out ; ++j)
                 pw[j].SendVideoFrame(fc[i].Convert(fr));
             ++frame_num;

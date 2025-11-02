@@ -28,6 +28,7 @@ public:
     VideoFrameReader& AddPacket(AVPacket *pkt);
     // 读取视频下一帧，读不到（结束或需要Packet）则返回nullptr
     AVFrame* NextFrame(AVFrame *fr=nullptr) override;
+    bool IsEnd() override{ return is_end; }
 };
 
 

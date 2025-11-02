@@ -1,18 +1,28 @@
 #include "PacketWriter.hpp"
 #include "Common.hpp"
-
+#include <unistd.h>
 using namespace std;
 
+extern uint32_t cpu_num;
+
 PacketWriter::PacketWriter(OutputVideo &vd){
-    if(!vd.is_open) vd.OpenOutput();
     AssertP(pkt_buf=av_packet_alloc());
     AssertP(pkt_ref=av_packet_alloc());
     fmt_ctx=vd.fmt_ctx;
 
     AssertP(ctx=avcodec_alloc_context3(vd.codec));
-    Assert(avcodec_parameters_to_context(ctx, vd.v_stream->codecpar));
-    dst_timebase=ctx->time_base=vd.vs_timebase;
+    ctx->width=vd.width;
+    ctx->height=vd.height;
+    ctx->pix_fmt=vd.pix_fmt;
+    ctx->time_base=vd.vs_timebase;
+    ctx->framerate=vd.fps;
+    ctx->thread_count=cpu_num;
+    if(fmt_ctx->oformat->flags&AVFMT_GLOBALHEADER)
+        ctx->flags|=AV_CODEC_FLAG_GLOBAL_HEADER;
     Assert(avcodec_open2(ctx, vd.codec, &vd.opt));
+    Assert(avcodec_parameters_from_context(vd.v_stream->codecpar, ctx));
+    dst_timebase=vd.vs_timebase;
+    if(!vd.is_open) vd.OpenOutput();
 }
 PacketWriter::PacketWriter(OutputVideo &vd, InputVideo &vd_in):PacketWriter(vd){
     int as_sz=min(vd_in.a_streams.size(), vd.a_streams.size());
@@ -35,8 +45,8 @@ PacketWriter::~PacketWriter()
 }
 
 PacketWriter& PacketWriter::SendPacket(AVPacket *pkt){
-    if(stream_mapping) pkt->stream_index=stream_mapping[pkt->stream_index];
     Assert(av_packet_ref(pkt_ref, pkt));
+    if(stream_mapping) pkt_ref->stream_index=stream_mapping[pkt_ref->stream_index];
     Assert(av_interleaved_write_frame(fmt_ctx, pkt_ref));
     return *this;
 }
@@ -72,12 +82,12 @@ PacketWriter& PacketWriter::WriteEnd(){
                 SendPacket(pkt_buf);
                 break;
             case AVERROR_EOF:
-                av_write_trailer(fmt_ctx);
+                Assert(av_write_trailer(fmt_ctx));
                 return *this;
             default:
                 Assert(ret);
         }
     }
-    av_write_trailer(fmt_ctx);
+    Assert(av_write_trailer(fmt_ctx));
     return *this;
 }
