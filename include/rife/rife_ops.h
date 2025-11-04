@@ -6,8 +6,8 @@
 #include <vector>
 
 // ncnn
-#include "ncnn/layer.h"
-#include "ncnn/pipeline.h"
+#include "layer.h"
+#include "pipeline.h"
 
 class Warp : public ncnn::Layer
 {

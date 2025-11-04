@@ -19,8 +19,11 @@ VideoFrameReader::VideoFrameReader(InputVideo &vd, bool manual){
     av_log(NULL, AV_LOG_INFO, "视频元数据[帧数:%d]\n",vd.num_frames);
 }
 VideoFrameReader::VideoFrameReader(VideoFrameReader &&vfr){
-    *this=vfr;
-    memset(&vfr, 0, sizeof(vfr));
+    is_end=vfr.is_end;
+    fr=vfr.fr; vfr.fr=nullptr;
+    pkt=vfr.pkt; vfr.pkt=nullptr;
+    ctx=vfr.ctx; vfr.ctx=nullptr;
+    pkt_reader=vfr.pkt_reader; vfr.pkt_reader=nullptr;
 }
 VideoFrameReader::~VideoFrameReader()
 {

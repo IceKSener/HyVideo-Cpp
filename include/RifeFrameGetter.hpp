@@ -4,7 +4,7 @@
 #include "IFrameGetter.hpp"
 #include "FrameConvert.hpp"
 #include "Score.hpp"
-#include "ncnn/mat.h"
+#include "mat.h"
 #include "rife/rife.h"
 #include  <memory>
 #include <map>
@@ -28,9 +28,6 @@ private:
     AVFrame *f0=nullptr,*f1=nullptr,*f0_rgb=nullptr,*f1_rgb=nullptr,*fr=nullptr;
     ncnn::Mat *md=nullptr;
     bool rgb_valid[2]={false, false};
-    //TODO 待优化
-    RifeFrameGetter(const RifeFrameGetter& rfg) = default;
-    RifeFrameGetter& operator=(const RifeFrameGetter& fc)=default;
     // 根据是否process决定使用的函数
     AVFrame *(RifeFrameGetter::*_NextFrame)()=&RifeFrameGetter::_NextFrameNoProecess;
     AVFrame* _NextFrameProecess();
@@ -42,7 +39,7 @@ public:
     };
 
     RifeFrameGetter(const std::shared_ptr<IFreamGetter>& getter, const Args& args);
-    RifeFrameGetter(RifeFrameGetter&& fc);
+    RifeFrameGetter(RifeFrameGetter&& rfg);
     ~RifeFrameGetter();
     RifeFrameGetter& SetFPSX(AVRational fpsx){ this->fpsx=fpsx;return *this; }
     RifeFrameGetter& SetProcess(bool process, const Score *score=nullptr);

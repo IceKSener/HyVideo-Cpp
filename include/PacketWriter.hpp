@@ -16,14 +16,11 @@ private:
     AVFormatContext *fmt_ctx = nullptr;
     AVCodecContext *ctx = nullptr;
     AVRational dst_timebase;
-
-    PacketWriter(const PacketWriter& v)=default;
-    PacketWriter& operator=(const PacketWriter& v)=default;
 public:
     PacketWriter(OutputVideo& vd);
     // 附带流索引映射
     PacketWriter(OutputVideo& vd, InputVideo& vd_in);
-    PacketWriter(PacketWriter&& w);
+    PacketWriter(PacketWriter&& pw);
     ~PacketWriter();
     //写入Packet
     PacketWriter& SendPacket(AVPacket *pkt);

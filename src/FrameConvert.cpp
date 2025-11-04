@@ -11,10 +11,9 @@ FrameConvert::FrameConvert(int dst_w, int dst_h, AVPixelFormat dst_f):dst_format
     Assert(av_frame_get_buffer(fr_buf, 0));
 }
 
-FrameConvert::FrameConvert(FrameConvert &&fc):dst_format(fc.dst_format),sws_map(fc.sws_map){
-    fr_buf=fc.fr_buf;
-    fc.fr_buf=nullptr;
-    sws_map.clear();
+FrameConvert::FrameConvert(FrameConvert &&fc):dst_format(fc.dst_format){
+    sws_map=std::move(fc.sws_map);
+    fr_buf=fc.fr_buf; fc.fr_buf=nullptr;
 }
 
 FrameConvert::~FrameConvert(){

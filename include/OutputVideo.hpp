@@ -25,9 +25,6 @@ private:
     std::vector<AVStream*> a_streams;
     const AVCodec *codec = nullptr;
     AVDictionary *opt = nullptr;
-    
-    OutputVideo(const OutputVideo& v)=default;
-    OutputVideo& operator=(const OutputVideo& v)=default;
 public:
     OutputVideo(std::string path);
     OutputVideo(OutputVideo&& vd);

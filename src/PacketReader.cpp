@@ -9,8 +9,7 @@ PacketReader::PacketReader(InputVideo &vd){
 
 PacketReader::PacketReader(PacketReader &&pr){
     fmt_ctx=pr.fmt_ctx;
-    pkt=pr.pkt;
-    pr.pkt=nullptr;
+    pkt=pr.pkt; pr.pkt=nullptr;
 }
 
 PacketReader::~PacketReader(){

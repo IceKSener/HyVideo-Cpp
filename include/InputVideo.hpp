@@ -26,9 +26,6 @@ private:
     AVStream* v_stream = nullptr;
     std::vector<AVStream*> a_streams;
     const AVCodec *codec = nullptr;
-
-    InputVideo(const InputVideo& v)=default;
-    InputVideo& operator=(const InputVideo& v)=default;
 public:
     InputVideo(std::string path);
     InputVideo(InputVideo&& v);

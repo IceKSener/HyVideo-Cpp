@@ -1,10 +1,10 @@
 // rife implemented with ncnn library
 
+#include "Common.hpp"
 #include "rife/rife.h"
 
 #include <algorithm>
 #include <vector>
-#include "ncnn/benchmark.h"
 
 #include "rife/comps/rife_preproc.comp.hex.h"
 #include "rife/comps/rife_postproc.comp.hex.h"
@@ -388,6 +388,167 @@ ncnn::Mat RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, fl
             process_cpu(in0image, in1image, timestep, outimage);
     }
     return outimage;
+}
+
+ncnn::Mat RIFE::process_buf(const ncnn::Mat &in0image, const ncnn::Mat &in1image, float timestep, ncnn::Mat &outimage){
+    if(timestep == 0.f){
+        return in0image;
+    }else if(timestep == 1.f){
+        return in1image;
+    }
+
+    const unsigned char* pixel0data = (const unsigned char*)in0image.data;
+    const unsigned char* pixel1data = (const unsigned char*)in1image.data;
+    const int w = in0image.w;
+    const int h = in0image.h;
+    const int channels = 3;
+    
+    int w_padded = (w + padding-1) / padding * padding;
+    int h_padded = (h + padding-1) / padding * padding;
+
+    ncnn::Mat in0, in1;
+
+    if(vkdev){
+        ncnn::VkAllocator* blob_vkallocator = vkdev->acquire_blob_allocator();
+        ncnn::VkAllocator* staging_vkallocator = vkdev->acquire_staging_allocator();
+
+        ncnn::Option opt = flownet.opt;
+        opt.blob_vkallocator = blob_vkallocator;
+        opt.workspace_vkallocator = blob_vkallocator;
+        opt.staging_vkallocator = staging_vkallocator;
+        
+        const size_t in_out_tile_elemsize = opt.use_fp16_storage ? 2u : 4u;
+
+        if (opt.use_fp16_storage && opt.use_int8_storage){
+            in0 = ncnn::Mat(w, h, (unsigned char*)pixel0data, (size_t)channels, 1);
+            in1 = ncnn::Mat(w, h, (unsigned char*)pixel1data, (size_t)channels, 1);
+        }else{
+            in0 = ncnn::Mat::from_pixels(pixel0data, ncnn::Mat::PIXEL_RGB, w, h);
+            in1 = ncnn::Mat::from_pixels(pixel1data, ncnn::Mat::PIXEL_RGB, w, h);
+        }
+
+        ncnn::VkCompute cmd(vkdev);
+
+        // upload
+        ncnn::VkMat in0_gpu, in1_gpu;
+        if(tta_mode){ ThrowErr("暂不支持"); }
+        else{
+            ncnn::VkMat timestep_gpu_padded, out_gpu, out_gpu_padded;
+            if(buf_in0_gpu_padded.empty()){
+                cmd.record_clone(in0, in0_gpu, opt);
+                buf_in0_gpu_padded.create(w_padded, h_padded, 3, in_out_tile_elemsize, 1, blob_vkallocator);
+                
+                std::vector<ncnn::VkMat> bindings(2);
+                bindings[0] = in0_gpu;
+                bindings[1] = buf_in0_gpu_padded;
+
+                std::vector<ncnn::vk_constant_type> constants(6);
+                constants[0].i = in0_gpu.w;
+                constants[1].i = in0_gpu.h;
+                constants[2].i = in0_gpu.cstep;
+                constants[3].i = buf_in0_gpu_padded.w;
+                constants[4].i = buf_in0_gpu_padded.h;
+                constants[5].i = buf_in0_gpu_padded.cstep;
+
+                cmd.record_pipeline(rife_preproc, bindings, constants, buf_in0_gpu_padded);
+            }
+            if(buf_in1_gpu_padded.empty()){
+                cmd.record_clone(in1, in1_gpu, opt);
+                buf_in1_gpu_padded.create(w_padded, h_padded, 3, in_out_tile_elemsize, 1, blob_vkallocator);
+                
+                std::vector<ncnn::VkMat> bindings(2);
+                bindings[0] = in1_gpu;
+                bindings[1] = buf_in1_gpu_padded;
+
+                std::vector<ncnn::vk_constant_type> constants(6);
+                constants[0].i = in1_gpu.w;
+                constants[1].i = in1_gpu.h;
+                constants[2].i = in1_gpu.cstep;
+                constants[3].i = buf_in1_gpu_padded.w;
+                constants[4].i = buf_in1_gpu_padded.h;
+                constants[5].i = buf_in1_gpu_padded.cstep;
+
+                cmd.record_pipeline(rife_preproc, bindings, constants, buf_in1_gpu_padded);
+            }
+            {
+                // timing: timestep pipeline
+                timestep_gpu_padded.create(w_padded, h_padded, 1, in_out_tile_elemsize, 1, blob_vkallocator);
+
+                std::vector<ncnn::VkMat> bindings(1);
+                bindings[0] = timestep_gpu_padded;
+
+                std::vector<ncnn::vk_constant_type> constants(4);
+                constants[0].i = timestep_gpu_padded.w;
+                constants[1].i = timestep_gpu_padded.h;
+                constants[2].i = timestep_gpu_padded.cstep;
+                constants[3].f = timestep;
+
+                cmd.record_pipeline(rife_v4_timestep, bindings, constants, timestep_gpu_padded);
+            }
+            
+            if(tta_temporal_mode){ ThrowErr("暂不支持"); }
+            else{
+                ncnn::Extractor ex = flownet.create_extractor();
+                ex.set_blob_vkallocator(blob_vkallocator);
+                ex.set_workspace_vkallocator(blob_vkallocator);
+                ex.set_staging_vkallocator(staging_vkallocator);
+
+                ex.input("in0", buf_in0_gpu_padded);
+                ex.input("in1", buf_in1_gpu_padded);
+                ex.input("in2", timestep_gpu_padded);
+                ex.extract("out0", out_gpu_padded, cmd);
+            }
+
+            if(opt.use_fp16_storage && opt.use_int8_storage){
+                out_gpu.create(w, h, (size_t)channels, 1, blob_vkallocator);
+            }else{
+                out_gpu.create(w, h, channels, (size_t)4u, 1, blob_vkallocator);
+            }
+
+            // postproc
+            {
+                std::vector<ncnn::VkMat> bindings(2);
+                bindings[0] = out_gpu_padded;
+                bindings[1] = out_gpu;
+
+                std::vector<ncnn::vk_constant_type> constants(6);
+                constants[0].i = out_gpu_padded.w;
+                constants[1].i = out_gpu_padded.h;
+                constants[2].i = out_gpu_padded.cstep;
+                constants[3].i = out_gpu.w;
+                constants[4].i = out_gpu.h;
+                constants[5].i = out_gpu.cstep;
+
+                cmd.record_pipeline(rife_postproc, bindings, constants, out_gpu);
+            }
+            // download
+            {
+                ncnn::Mat out;
+                if (opt.use_fp16_storage && opt.use_int8_storage){
+                    out = ncnn::Mat(out_gpu.w, out_gpu.h, (unsigned char*)outimage.data, (size_t)channels, 1);
+                }
+                cmd.record_clone(out_gpu, out, opt);
+
+                                cmd.submit_and_wait();
+                
+                if (!(opt.use_fp16_storage && opt.use_int8_storage))                {
+                    out.to_pixels((unsigned char*)outimage.data, ncnn::Mat::PIXEL_RGB);
+                }
+            }
+        }
+        vkdev->reclaim_blob_allocator(blob_vkallocator);
+        vkdev->reclaim_staging_allocator(staging_vkallocator);
+    }else{
+        ThrowErr("暂不支持");
+    }
+    return outimage;
+}
+
+void RIFE::buf_next(){
+    buf_in0image = buf_in1image;
+    buf_in0_gpu_padded = buf_in1_gpu_padded;
+    buf_in1image.release();
+    buf_in1_gpu_padded.release();
 }
 
 int RIFE::process_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const

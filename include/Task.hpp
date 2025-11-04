@@ -27,6 +27,7 @@ private:
     bool _taskTranscode();
 public:
     Task(TaskType type, TaskArgs& args):type(type),args(args){ }
+    Task(Task&& t);
     std::vector<InputVideo>& getInputs(){ return inputs; }
 
     InputVideo& addInput(std::string path);

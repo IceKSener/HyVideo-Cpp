@@ -5,20 +5,25 @@ project(HyVideo VERSION 0.1.0 LANGUAGES C CXX)
 
 SET (CMAKE_CXX_STANDARD 17)
 
+add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+
+if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    add_compile_definitions(DEBUG)
+endif()
+
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 find_package(PkgConfig REQUIRED)
-find_package(OpenMP REQUIRED)
+find_package(ncnn REQUIRED)
 pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
-pkg_check_modules(NCNN REQUIRED ncnn)
-link_directories(${NCNN_LIBRARY_DIRS})
-include_directories(${FFMPEG_INCLUDE_DIRS} ${NCNN_INCLUDE_DIRS})
+link_directories(${FFMPEG_LIBRARY_DIRS})
+include_directories(${FFMPEG_INCLUDE_DIRS})
 
 file(GLOB_RECURSE other_cpp src/*.cpp)
 add_executable(HyVideo HyVideo.cpp ${other_cpp})
 add_executable(Test Test.cpp)
 
-target_link_libraries(HyVideo OpenMP::OpenMP_CXX ${FFMPEG_LIBRARIES} ${NCNN_LIBRARIES} glslang)
+target_link_libraries(HyVideo ${FFMPEG_LIBRARIES} ncnn)
 target_link_libraries(Test ${FFMPEG_LIBRARIES})
 target_sources(Test PRIVATE src/Common.cpp)
 

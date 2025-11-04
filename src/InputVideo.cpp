@@ -5,8 +5,16 @@
 using namespace std;
 InputVideo::InputVideo(string path):path(path){ }
 InputVideo::InputVideo(InputVideo&& vd){
-    *this=vd;
-    memset(&vd, 0, sizeof(vd));
+    path=vd.path;
+    is_open=vd.is_open;
+    width=vd.width; height=vd.height;
+    fps=vd.fps; sar=vd.sar;
+    num_frames=vd.num_frames;
+    pix_fmt=vd.pix_fmt;
+    fmt_ctx=vd.fmt_ctx; vd.fmt_ctx=nullptr;
+    v_stream=vd.v_stream;
+    a_streams=std::move(vd.a_streams);
+    codec=vd.codec;
 }
 
 InputVideo::~InputVideo(){

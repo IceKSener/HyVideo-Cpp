@@ -3,6 +3,12 @@
 using namespace std;
 namespace fs=filesystem;
 
+
+#if _MSC_VER
+char av_error[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+#define av_err2str(errnum) av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, errnum)
+#endif
+
 void _MakeErr(const string& msg, const char* file, int line){
     static const char* fmt= "| 文件:%s | 行号:%d |\n发生错误: %s";
     static char strbuf[2048];

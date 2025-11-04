@@ -6,7 +6,7 @@
 #include <string>
 
 // ncnn
-#include "ncnn/net.h"
+#include "net.h"
 
 class RIFE
 {
@@ -22,8 +22,8 @@ public:
     // 接收RGBRGBRGB输入
     ncnn::Mat process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
 
-
-    // int process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+    ncnn::Mat process_buf(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage);
+    void buf_next();
 
 private:
     int process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
@@ -54,7 +54,10 @@ private:
     int padding;
     
     //为连续补帧做的缓存
-    // const uint8_t* pre
+    ncnn::Mat buf_in0image;
+    ncnn::Mat buf_in1image;
+    ncnn::VkMat buf_in0_gpu_padded;
+    ncnn::VkMat buf_in1_gpu_padded;
 };
 
 #endif // RIFE_H

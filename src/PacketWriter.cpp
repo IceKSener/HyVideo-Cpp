@@ -1,6 +1,5 @@
 #include "PacketWriter.hpp"
 #include "Common.hpp"
-#include <unistd.h>
 using namespace std;
 
 extern uint32_t cpu_num;
@@ -32,9 +31,13 @@ PacketWriter::PacketWriter(OutputVideo &vd, InputVideo &vd_in):PacketWriter(vd){
         stream_mapping[vd_in.a_streams[i]->index] = vd.a_streams[i]->index;
     }
 }
-PacketWriter::PacketWriter(PacketWriter &&w){
-    *this=w;
-    memset(&w, 0, sizeof(w));
+PacketWriter::PacketWriter(PacketWriter &&pw){
+    stream_mapping=pw.stream_mapping; pw.stream_mapping=nullptr;
+    pkt_buf=pw.pkt_buf; pw.pkt_buf=nullptr;
+    pkt_ref=pw.pkt_ref; pw.pkt_ref=nullptr;
+    fmt_ctx=pw.fmt_ctx;
+    ctx=pw.ctx; pw.ctx=nullptr;
+    dst_timebase=pw.dst_timebase;
 }
 PacketWriter::~PacketWriter()
 {

@@ -12,9 +12,6 @@ private:
     AVPacket *pkt = nullptr;
     AVFrame *fr = nullptr;
     PacketReader *pkt_reader = nullptr;
-    
-    VideoFrameReader(const VideoFrameReader& vfr)=default;
-    VideoFrameReader& operator=(const VideoFrameReader& vfr)=default;
 public:
     /*
     * 创建视频的帧读取类

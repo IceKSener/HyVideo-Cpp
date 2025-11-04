@@ -7,8 +7,17 @@ extern "C"{
 using namespace std;
 OutputVideo::OutputVideo(string path):path(path){ }
 OutputVideo::OutputVideo(OutputVideo&& vd){
-    *this=vd;
-    memset(&vd, 0, sizeof(vd));
+    path=std::move(vd.path);
+    is_init=vd.is_init; is_open=vd.is_open;
+    width=vd.width; height=vd.height;
+    fps=vd.fps; vs_timebase=vd.vs_timebase;
+    format=std::move(vd.format);
+    pix_fmt=vd.pix_fmt;
+    fmt_ctx=vd.fmt_ctx; vd.fmt_ctx=nullptr;
+    v_stream=vd.v_stream;
+    a_streams=std::move(vd.a_streams);
+    codec=vd.codec;
+    opt=vd.opt; vd.opt=nullptr;
 }
 
 OutputVideo::~OutputVideo(){
@@ -17,6 +26,7 @@ OutputVideo::~OutputVideo(){
             avio_closep(&fmt_ctx->pb);
         avformat_free_context(fmt_ctx);
     }
+    if(opt) av_dict_free(&opt);
 }
 
 OutputVideo& OutputVideo::CopyVStreamParam(AVStream *vs_in){

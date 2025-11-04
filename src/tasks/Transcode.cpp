@@ -18,7 +18,7 @@ using namespace std;
 using json=nlohmann::json;
 namespace fs = filesystem;
 
-static const std::string conf_dir="./configs/";
+static const std::string _conf_dir="./configs/";
 struct _target{
     string ext, format, coder, pix_fmt;
     int maxw,maxh,crf;
@@ -52,7 +52,7 @@ struct _process{
 };
 
 // 从配置文件夹中读取配置
-json ReadConf(const string& conf, const string& conf_dir=conf_dir){
+json ReadConf(const string& conf, const string& conf_dir=_conf_dir){
     fs::path path;
     if(!findConf(path, conf, conf_dir)) ThrowErr("未找到配置["+conf+"]");
     json config;

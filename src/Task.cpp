@@ -2,6 +2,12 @@
 
 using namespace std;
 
+Task::Task(Task &&t){
+    type = t.type;
+    inputs = std::move(t.inputs);
+    args = std::move(t.args);
+}
+
 InputVideo& Task::addInput(string path){
     return inputs.emplace_back(path);
 }

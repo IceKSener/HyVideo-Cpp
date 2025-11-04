@@ -25,9 +25,6 @@ private:
     std::unordered_map<FrameFormat,SwsContext*,FormatHash> sws_map;
     AVFrame *fr_buf=nullptr;
     const FrameFormat dst_format;
-
-    FrameConvert(const FrameConvert& fc)=default;
-    FrameConvert& operator=(const FrameConvert& fc)=default;
 public:
     FrameConvert(int dst_w, int dst_h, AVPixelFormat dst_f);
     FrameConvert(FrameConvert&& fc);
