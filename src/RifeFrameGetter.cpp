@@ -156,11 +156,11 @@ AVFrame *RifeFrameGetter::_NextFrameNoProecess(){
         }
         m1=ncnn::Mat(w,h,f1_rgb->data[0],(size_t)3,1);
     }
-    if(md->empty()) md->create(w, h,(size_t)3,3);
+    // if(md->empty()) md->create(w, h,(size_t)3,3);
     
     clocker.start(20);
-    ncnn::Mat mo=rife->process(m0, m1, av_q2d(timestep), *md);
-    // ncnn::Mat mo= rife->process_buf(m0, m1, av_q2d(timestep), *md);
+    // ncnn::Mat mo=rife->process(m0, m1, av_q2d(timestep), *md);
+    ncnn::Mat mo = rife->process_buf(m0, m1, av_q2d(timestep), *md);
     clocker.end(20);
     AssertI(av_image_fill_arrays(fr->data, fr->linesize, (uint8_t*)mo.data, AV_PIX_FMT_RGB24, w, h,1));
     fr->time_base=f1->time_base;

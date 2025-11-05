@@ -8,6 +8,10 @@
 // ncnn
 #include "net.h"
 
+namespace RifeInnerContext{
+class GpuContext;
+class CpuContext;
+};
 class RIFE
 {
 public:
@@ -30,6 +34,16 @@ private:
     int process_v4_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
     int process_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
     int process_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
+
+    int workflow_v4_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
+    int workflow_v4_temporal_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
+    int workflow_v4_tta_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
+    int workflow_v4_tta_temporal_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
+
+    int workflow_v4_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
+    int workflow_v4_temporal_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
+    int workflow_v4_tta_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
+    int workflow_v4_tta_temporal_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
 
     ncnn::VulkanDevice* vkdev;
     ncnn::Net flownet;
@@ -54,10 +68,11 @@ private:
     int padding;
     
     //为连续补帧做的缓存
-    ncnn::Mat buf_in0image;
-    ncnn::Mat buf_in1image;
-    ncnn::VkMat buf_in0_gpu_padded;
-    ncnn::VkMat buf_in1_gpu_padded;
+    std::vector<ncnn::Mat> buf0;
+    std::vector<ncnn::Mat> buf1;
+    std::vector<ncnn::VkMat> buf0_gpu;
+    std::vector<ncnn::VkMat> buf1_gpu;
+    int width,height,channels;
 };
 
 #endif // RIFE_H

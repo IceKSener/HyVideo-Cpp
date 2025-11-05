@@ -24,7 +24,7 @@ add_executable(HyVideo HyVideo.cpp ${other_cpp})
 add_executable(Test Test.cpp)
 
 target_link_libraries(HyVideo ${FFMPEG_LIBRARIES} ncnn)
-target_link_libraries(Test ${FFMPEG_LIBRARIES})
+target_link_libraries(Test ${FFMPEG_LIBRARIES} ncnn)
 target_sources(Test PRIVATE src/Common.cpp)
 
 

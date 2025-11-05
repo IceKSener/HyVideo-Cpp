@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/out/build/UCRT64/HyVideo.exe",
             "args": [
-                ":transcode:conf_out=vo",
+                ":transcode:conf_in=rife:conf_out=vo",
                 "W:/test_s.mp4"
             ],
             "stopAtEntry": false,
