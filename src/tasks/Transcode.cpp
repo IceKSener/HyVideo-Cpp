@@ -1,8 +1,9 @@
 #include "Task.hpp"
 #include "Common.hpp"
-#include "RifeFrameGetter.hpp"
 #include "OutputVideo.hpp"
-#include "VideoFrameReader.hpp"
+#include "FrameGetter/VideoFrameReader.hpp"
+#include "FrameGetter/RifeFrameGetter.hpp"
+#include "FrameGetter/BufferFrameGetter.hpp"
 #include "PacketReader.hpp"
 #include "PacketWriter.hpp"
 extern "C"{

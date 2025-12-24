@@ -1,12 +1,9 @@
 #include <string>
 #include <vector>
-#include <thread>
-#include <omp.h>
 #include "Common.hpp"
 #include "Task.hpp"
 
 using namespace std;
-uint32_t cpu_num=1;
 
 class ArgsParser{
 private:
@@ -44,14 +41,15 @@ void analyzeTask(string str, TaskType& tasktype, TaskArgs& typeargs){
     }
     typeargs=args;
 }
+
 static void test(){
 }
 
 int main(int argc, char *argv[]){
+    init_configs();
+    clocker.start(1);
     test();
     ArgsParser ap(argc, argv);
-    cpu_num=thread::hardware_concurrency();
-    omp_set_num_threads(cpu_num);
     vector<Task> tasks;
     try{
         TaskType tasktype=CALC_SCORES;
@@ -84,5 +82,6 @@ int main(int argc, char *argv[]){
         return -1;
     }
     AvLog("结束\n");
+    clocker.end(1);
     return 0;
 }

@@ -1,4 +1,6 @@
 #include "Common.hpp"
+#include <thread>
+#include <omp.h>
 
 using namespace std;
 namespace fs=filesystem;
@@ -9,7 +11,13 @@ char av_error[AV_ERROR_MAX_STRING_SIZE] = { 0 };
 #define av_err2str(errnum) av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, errnum)
 #endif
 
-void _MakeErr(const string& msg, const char* file, int line){
+void init_configs(){
+    GlobalConfig.cpu_num = thread::hardware_concurrency();
+    omp_set_num_threads(GlobalConfig.cpu_num);
+}
+
+void _MakeErr(const string &msg, const char *file, int line)
+{
     static const char* fmt= "| 文件:%s | 行号:%d |\n发生错误: %s";
     static char strbuf[2048];
     snprintf(strbuf, sizeof(strbuf), fmt, file, line, msg.c_str());

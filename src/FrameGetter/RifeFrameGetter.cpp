@@ -1,4 +1,4 @@
-#include "RifeFrameGetter.hpp"
+#include "FrameGetter/RifeFrameGetter.hpp"
 #include "Common.hpp"
 extern "C"{
     #include "libavutil/imgutils.h"
@@ -117,9 +117,6 @@ AVFrame *RifeFrameGetter::_NextFrameNoProecess(){
         f0_index=f1_index++;
         f0_pts=f1_pts;
         f1_pts=f1->pts;
-        // *m0=*m1;
-        //TODO 待优化
-        // m0->release();
     }
     if(timestep.num==0){ ++fr_index;return f0; }
 

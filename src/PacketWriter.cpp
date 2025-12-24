@@ -2,8 +2,6 @@
 #include "Common.hpp"
 using namespace std;
 
-extern uint32_t cpu_num;
-
 PacketWriter::PacketWriter(OutputVideo &vd){
     AssertP(pkt_buf=av_packet_alloc());
     AssertP(pkt_ref=av_packet_alloc());
@@ -15,7 +13,7 @@ PacketWriter::PacketWriter(OutputVideo &vd){
     ctx->pix_fmt=vd.pix_fmt;
     ctx->time_base=vd.vs_timebase;
     ctx->framerate=vd.fps;
-    ctx->thread_count=cpu_num;
+    ctx->thread_count=GlobalConfig.cpu_num;
     if(fmt_ctx->oformat->flags&AVFMT_GLOBALHEADER)
         ctx->flags|=AV_CODEC_FLAG_GLOBAL_HEADER;
     Assert(avcodec_open2(ctx, vd.codec, &vd.opt));
@@ -55,6 +53,7 @@ PacketWriter& PacketWriter::SendPacket(AVPacket *pkt){
 }
 
 PacketWriter& PacketWriter::SendVideoFrame(AVFrame *fr){
+    AvLog("%06X\n",*(uint32_t*)(fr->data[0]+0x60000));
     Assert(avcodec_send_frame(ctx, fr));
     int ret;
     while(true){

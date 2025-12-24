@@ -42,7 +42,7 @@ void main()
     float v = float(bottom_blob_data[gz * p.cstep + gy * p.w + gx]);
 
     const float denorm_val = 255.f;
-    const float clip_eps = 0.5f;
+    const float clip_eps = 1.5f;
 
     v = v * denorm_val + clip_eps;
 

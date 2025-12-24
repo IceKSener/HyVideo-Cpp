@@ -1,7 +1,7 @@
 #include "Task.hpp"
 #include "Common.hpp"
 #include "Score.hpp"
-#include "VideoFrameReader.hpp"
+#include "FrameGetter/VideoFrameReader.hpp"
 #include <fstream>
 
 using namespace std;

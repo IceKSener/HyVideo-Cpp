@@ -1,16 +1,14 @@
-#include "VideoFrameReader.hpp"
+#include "FrameGetter/VideoFrameReader.hpp"
 #include "Common.hpp"
 
 using namespace std;
-
-extern uint32_t cpu_num;
 
 VideoFrameReader::VideoFrameReader(InputVideo &vd, bool manual){
     if(!vd.is_open) vd.OpenInput();
     if(!manual) pkt_reader=new PacketReader(vd);
     AssertP(ctx=avcodec_alloc_context3(vd.codec));
     Assert(avcodec_parameters_to_context(ctx, vd.v_stream->codecpar));
-    ctx->thread_count=cpu_num;
+    ctx->thread_count=GlobalConfig.cpu_num;
     ctx->time_base=vd.v_stream->time_base;
     Assert(avcodec_open2(ctx, vd.codec, NULL));
     AssertP(pkt=av_packet_alloc());
@@ -39,10 +37,9 @@ VideoFrameReader &VideoFrameReader::AddPacket(AVPacket *pkt){
     return *this;
 }
 AVFrame* VideoFrameReader::NextFrame(AVFrame *fr){
-    if(!fr) fr=this->fr;
     int ret;
     while(true){
-        switch(ret=avcodec_receive_frame(ctx,fr)){
+        switch(ret=avcodec_receive_frame(ctx,this->fr)){
         case AVERROR(EAGAIN):
             if(pkt_reader){
                 if(pkt_reader->NextVideoPacket(pkt)){
@@ -56,13 +53,15 @@ AVFrame* VideoFrameReader::NextFrame(AVFrame *fr){
             }
             else return nullptr;
         case 0:
-            fr->time_base=ctx->time_base;
-            return fr;
+            this->fr->time_base=ctx->time_base;
+            if(fr) av_frame_ref(fr, this->fr);
+            return this->fr;
         case AVERROR_EOF:
             return nullptr;
         default:
             Assert(ret);
         }
     }
-    return fr;
+    if(fr) av_frame_ref(fr, this->fr);
+    return this->fr;
 }

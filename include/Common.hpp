@@ -9,6 +9,12 @@ extern "C"{
 #include <vector>
 #include <filesystem>
 
+static struct{
+    uint32_t cpu_num = 1;
+    int buf_sz = 4;
+}GlobalConfig;
+void init_configs();
+
 #define AvLog(fmt_str,...) av_log(NULL,AV_LOG_INFO,fmt_str,##__VA_ARGS__)
 
 #define ThrowErr(msg) (_MakeErr(msg,__FILE__,__LINE__))
@@ -113,9 +119,9 @@ public:
 static Clocker clocker;
 #else
 struct Clocker{
-    void start(int index){}
-    void end(int index){}
-} clocker;
+    void start(int i){}
+    void end(int i){}
+};
+static Clocker clocker;
 #endif
-
 #endif //COMMON_HPP

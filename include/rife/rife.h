@@ -8,10 +8,6 @@
 // ncnn
 #include "net.h"
 
-namespace RifeInnerContext{
-class GpuContext;
-class CpuContext;
-};
 class RIFE
 {
 public:
@@ -30,20 +26,32 @@ public:
     void buf_next();
 
 private:
+    class GpuContext;
+    class CpuContext;
     int process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
     int process_v4_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
     int process_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
     int process_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const;
 
-    int workflow_v4_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
-    int workflow_v4_temporal_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
-    int workflow_v4_tta_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
-    int workflow_v4_tta_temporal_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], float timestep, ncnn::Mat& out, ncnn::Option& opt, RifeInnerContext::GpuContext& gpu_ctx) const;
+    int workflow_v4_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, float timestep, ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+    int workflow_v4_temporal_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, float timestep, ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+    int workflow_v4_tta_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], float timestep, ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+    int workflow_v4_tta_temporal_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], float timestep, ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
 
-    int workflow_v4_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
-    int workflow_v4_temporal_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
-    int workflow_v4_tta_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
-    int workflow_v4_tta_temporal_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], float timestep, ncnn::Mat& out, RifeInnerContext::CpuContext& cpu_ctx) const;
+    int workflow_v4_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, float timestep, ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    int workflow_v4_temporal_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, float timestep, ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    int workflow_v4_tta_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], float timestep, ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    int workflow_v4_tta_temporal_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], float timestep, ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    
+    int workflow_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+    int workflow_temporal_gpu(ncnn::VkMat& in0_gpu_padded, ncnn::VkMat& in1_gpu_padded, ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+    int workflow_tta_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+    int workflow_tta_temporal_gpu(ncnn::VkMat in0_gpu_padded[8], ncnn::VkMat in1_gpu_padded[8], ncnn::Mat& out, ncnn::Option& opt, GpuContext& gpu_ctx) const;
+
+    int workflow_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    int workflow_temporal_cpu(ncnn::Mat& in0_padded, ncnn::Mat& in1_padded, ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    int workflow_tta_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], ncnn::Mat& out, CpuContext& cpu_ctx) const;
+    int workflow_tta_temporal_cpu(ncnn::Mat in0_padded[8], ncnn::Mat in1_padded[8], ncnn::Mat& out, CpuContext& cpu_ctx) const;
 
     ncnn::VulkanDevice* vkdev;
     ncnn::Net flownet;
