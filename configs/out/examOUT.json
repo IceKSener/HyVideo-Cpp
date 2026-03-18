@@ -1,0 +1,13 @@
+{
+    "type":"out",
+    "targets":[
+        {
+            "coder" : "h264",
+            "crf" : 23,
+            "format":"matroska",
+            "pix_fmt":"yuv420p",
+            "ext" : "my_extension",
+            "faststart": true
+        }
+    ]
+}

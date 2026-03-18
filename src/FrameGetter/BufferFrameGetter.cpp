@@ -1,5 +1,6 @@
 #include "FrameGetter/BufferFrameGetter.hpp"
-#include "Common.hpp"
+
+#include "GlobalConfig.hpp"
 
 using namespace std;
 
@@ -14,10 +15,10 @@ BufferFrameGetter::~BufferFrameGetter(){
         av_frame_free(&buf_frs[i]);
 }
 
-AVFrame* BufferFrameGetter::NextFrame(AVFrame *fr){
+AVFrame* BufferFrameGetter::nextFrame(AVFrame *fr){
     return nullptr;
 }
 
-bool BufferFrameGetter::IsEnd(){
+bool BufferFrameGetter::isEnd(){
     return false;
 }

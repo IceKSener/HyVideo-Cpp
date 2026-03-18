@@ -1,6 +1,5 @@
 // rife implemented with ncnn library
 
-#include "Common.hpp"
 #include "rife/rife.h"
 
 #include <algorithm>
@@ -21,6 +20,7 @@
 #include "rife/comps/rife_v4_timestep_tta.comp.hex.h"
 
 #include "rife/rife_ops.h"
+#include "utils/Assert.hpp"
 
 DEFINE_LAYER_CREATOR(Warp)
 
@@ -869,6 +869,9 @@ ncnn::Mat RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, fl
         return in1image;
     }
 
+    if(outimage.empty())
+        outimage.create(in0image.w, in0image.h, (size_t)3, 1);
+    
     if(rife_v4){
         if(vkdev)
             process_v4_gpu(in0image, in1image, timestep, outimage);
@@ -887,7 +890,6 @@ ncnn::Mat RIFE::process(const ncnn::Mat& in0image, const ncnn::Mat& in1image, fl
     }
     return outimage;
 }
-
 ncnn::Mat RIFE::process_buf(const ncnn::Mat &in0image, const ncnn::Mat &in1image, float timestep, ncnn::Mat &outimage){
     if(timestep == 0.f){
         return in0image;
@@ -1014,9 +1016,14 @@ ncnn::Mat RIFE::process_buf(const ncnn::Mat &in0image, const ncnn::Mat &in1image
     return outimage;
 }
 
-void RIFE::buf_next(){
+void RIFE::buf_next() {
     buf0 = std::move(buf1);
     buf0_gpu = std::move(buf1_gpu);
+}
+
+void RIFE::buf_clear() {
+    buf0.clear(); buf1.clear();
+    buf0_gpu.clear(); buf1_gpu.clear();
 }
 
 int RIFE::process_v4_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
@@ -1084,7 +1091,6 @@ int RIFE::process_v4_gpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, f
 
     return 0;
 }
-
 int RIFE::process_v4_cpu(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage) const
 {
     const unsigned char* pixel0data = (const unsigned char*)in0image.data;

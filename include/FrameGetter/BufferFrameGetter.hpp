@@ -22,8 +22,8 @@ public:
     BufferFrameGetter(BufferFrameGetter&&) = default;
     ~BufferFrameGetter();
 
-    AVFrame* NextFrame(AVFrame *fr);
-    bool IsEnd();
+    AVFrame* nextFrame(AVFrame *fr);
+    bool isEnd();
 };
 
 #endif

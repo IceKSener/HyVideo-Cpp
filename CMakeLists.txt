@@ -3,13 +3,12 @@ project(HyVideo VERSION 0.1.0 LANGUAGES C CXX)
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
 
+SET (project_dir ${CMAKE_CURRENT_LIST_DIR})
+SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${project_dir}/bin)
 SET (CMAKE_CXX_STANDARD 17)
 
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
-
-if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
-    add_compile_definitions(DEBUG)
-endif()
+add_compile_definitions("$<$<CONFIG:Debug>:DEBUG>")
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -19,13 +18,17 @@ pkg_check_modules(FFMPEG REQUIRED libavcodec libavformat libavutil libswscale)
 link_directories(${FFMPEG_LIBRARY_DIRS})
 include_directories(${FFMPEG_INCLUDE_DIRS})
 
-file(GLOB_RECURSE other_cpp src/*.cpp)
+file(GLOB_RECURSE other_cpp CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE rife_cpp src/rife/*.cpp)
 add_executable(HyVideo HyVideo.cpp ${other_cpp})
-add_executable(Test Test.cpp)
+# add_executable(Test Test.cpp)
+add_executable(Mid_Rife Mid_Rife.cpp ${rife_cpp})
 
 target_link_libraries(HyVideo ${FFMPEG_LIBRARIES} ncnn)
-target_link_libraries(Test ${FFMPEG_LIBRARIES} ncnn)
-target_sources(Test PRIVATE src/Common.cpp)
+# target_link_libraries(Test ${FFMPEG_LIBRARIES} ncnn)
+# target_sources(Test PRIVATE src/Common.cpp)
+target_link_libraries(Mid_Rife ${FFMPEG_LIBRARIES} ncnn)
+# target_sources(Mid_Rife PRIVATE src/Common.cpp)
 
 
 # 查找所有 .comp 文件
@@ -56,5 +59,15 @@ endforeach()
 add_custom_target(GenerateShaderHeaders
     DEPENDS ${GENERATED_HEADERS}
 )
-# 确保在编译前生成头文件
+# 确保在编译前生成shader头文件
 add_dependencies(HyVideo GenerateShaderHeaders)
+
+# 构造时将configs复制到目录下
+add_custom_command(
+    TARGET HyVideo  # 关联到 HyVideo 目标
+    PRE_BUILD     # 执行时机：编译目标前
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${project_dir}/configs  # 源目录
+            ${project_dir}/bin/configs  # 目标目录
+    COMMENT "Copying configs directory to bin/configs"  # 构建时打印提示
+)

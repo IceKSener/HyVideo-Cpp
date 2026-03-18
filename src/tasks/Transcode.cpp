@@ -1,31 +1,44 @@
 #include "Task.hpp"
-#include "Common.hpp"
-#include "OutputVideo.hpp"
-#include "FrameGetter/VideoFrameReader.hpp"
-#include "FrameGetter/RifeFrameGetter.hpp"
-#include "FrameGetter/BufferFrameGetter.hpp"
-#include "PacketReader.hpp"
-#include "PacketWriter.hpp"
-extern "C"{
-    #include "libavutil/pixdesc.h"
-}
-#include "nlohmann\json.hpp"
+
 #include <stack>
 #include <fstream>
 #include <filesystem>
 #include <memory>
+// #include <unordered_map>
+
+extern "C"{
+    #include "libavutil/pixdesc.h"
+}
+#include "nlohmann\json.hpp"
+
+#include "OutputVideo.hpp"
+#include "FrameGetter/VideoFrameReader.hpp"
+#include "FrameGetter/RifeFrameGetter.hpp"
+#include "FrameGetter/BufferFrameGetter.hpp"
+#include "GlobalConfig.hpp"
+#include "PacketReader.hpp"
+#include "PacketWriter.hpp"
+#include "utils/Assert.hpp"
+#include "utils/Logger.hpp"
+#include "utils/FileStr.hpp"
 
 using namespace std;
+using namespace filesystem;
 using json=nlohmann::json;
 namespace fs = filesystem;
 
-static const std::string _conf_dir="./configs/";
+// 扫描的配置目录
+static const string _conf_dir="./configs/";
+
+// 视频输出配置
 struct _target{
     string ext, format, coder, pix_fmt;
-    int maxw,maxh,crf;
+    int maxw, maxh, crf;
     bool faststart;
     optional<double> size_limit;
 };
+
+// 视频帧处理配置
 struct _process{
     struct _upscale{
         bool use_gpu=false;
@@ -48,269 +61,306 @@ struct _process{
             if(engine=="rife") delete (RifeFrameGetter::Args*)args;
         }
     };
+    // 超分辨率配置
     optional<_upscale> upscale;
+    // 插帧配置
     optional<_interpolation> interpolation;
 };
 
 // 从配置文件夹中读取配置
-json ReadConf(const string& conf, const string& conf_dir=_conf_dir){
+static json ReadConf(const string& conf, const string& conf_dir=_conf_dir) {
     fs::path path;
-    if(!findConf(path, conf, conf_dir)) ThrowErr("未找到配置["+conf+"]");
+    if (!findConf(path, conf, conf_dir)) ThrowErr("未找到配置["+conf+"]");
     json config;
     ifstream f(path);
-    f>>config;
-    f.close();
+    if (!f.is_open()) ThrowErr("配置文件打开失败["+path.string()+"]");
+    f >> config;
     return config;
 }
-// 将带import的配置文件展开成数组
-static vector<json> FlatImports(const vector<string>& conf_strs){
-    vector<json> confs;
-    map<string,bool> conf_open;
-    stack<string> conf_toread;
 
-    for(auto it=conf_strs.rbegin() ; it!=conf_strs.rend() ; ++it)
-        conf_toread.push(*it);
-    while(!conf_toread.empty()){
-        string conf_str=conf_toread.top();
-        conf_toread.pop();
-        if(conf_open[conf_str]) continue;
-        json cfg=ReadConf(conf_str);
-        conf_open[conf_str]=true;
-        try{
-            if(cfg["import"].is_array()){
-                auto& imports=cfg["import"];
-                for(auto it=imports.rbegin(); it!=imports.rend() ; ++it)
-                    conf_toread.push(*it);
+// 将带import的配置文件展开成数组
+static vector<json> FlatImports(const vector<string>& conf_names){
+    vector<json> confs;
+    unordered_map<string,bool> conf_open;
+    stack<string> conf_to_read;
+
+    // 反向入栈
+    for (auto it=conf_names.rbegin() ; it!=conf_names.rend() ; ++it)
+        conf_to_read.push(*it);
+    
+    while (!conf_to_read.empty()) {
+        string conf_name = conf_to_read.top();
+        conf_to_read.pop();
+        // 已读取的配置不再重复读取
+        if (conf_open[conf_name]) continue;
+        json cfg = ReadConf(conf_name);
+        conf_open[conf_name] = true;
+        try {
+            if (cfg["import"].is_array()) {
+                auto& imports = cfg["import"];
+                for (auto it=imports.rbegin(); it!=imports.rend() ; ++it)
+                    conf_to_read.push(tolower((string)*it));
             }
-            cfg["_name"]=conf_str;
+            cfg["_name"] = conf_name;
             confs.push_back(cfg);
-        }catch(string err){
+        } catch (string err) {
             ThrowErr(err);
-        }catch(exception err){
+        } catch (exception err) {
             ThrowErr(err.what());
         }
     }
     return confs;
 }
 
-// 读取输出配置
+// 读取输出配置，格式: "conf1;conf2;con3"
 static vector<_target> ReadTargets(const string& conf_str){
     vector<json> confs = FlatImports(strsplit(conf_str,";"));
     vector<_target> targets;
 
-    for(auto& conf:confs){
-        try{
+    for (auto& conf:confs) {
+        try {
             string name=conf["_name"];
             // AvLog("加载配置:%s\n",name.c_str());  //DEBUG
             // AvLog("%s\n",conf.dump(2).c_str());  //DEBUG
-            if(conf["type"]!="out") throw "配置"+name+"不是输出配置";
-            if(conf["targets"].is_array()){
-                for(auto& target:conf["targets"]){
-                    auto& target_v=targets.emplace_back();
-                    target_v.coder=target.value("coder","h264");
-                    target_v.crf=target.value("crf",23);
-                    target_v.maxw=target.value("maxw",-1);
-                    target_v.maxh=target.value("maxh",-1);
-                    target_v.format=target.value("format","mp4");
-                    target_v.pix_fmt=target.value("pix_fmt","mp4");
-                    target_v.ext=target.value("ext","mp4");
-                    target_v.faststart=target.value("faststart",true);
-                    target_v.size_limit=target.value("limit_size",-1.0);
+            if (conf["type"] != "out") throw "配置"+name+"不是输出配置";
+            if (conf["targets"].is_array()){
+                for(auto& target: conf["targets"]){
+                    auto& target_v = targets.emplace_back();
+                    target_v.coder = target.value("coder", "h264");
+                    target_v.crf = target.value("crf", 23);
+                    target_v.maxw = target.value("maxw", -1);
+                    target_v.maxh = target.value("maxh", -1);
+                    target_v.format = target.value("format", "mp4");
+                    target_v.pix_fmt = target.value("pix_fmt", "yuv420p");
+                    target_v.ext = target.value("ext", "mp4");
+                    target_v.faststart = target.value("faststart", true);
+                    target_v.size_limit = target.value("limit_size", -1.0);
                 }
             }
-        }catch(string err){
+        } catch(string err) {
             ThrowErr(err);
-        }catch(exception err){
+        } catch(exception err) {
             ThrowErr(err.what());
         }
     }
     return targets;
 }
+
 // 读取帧处理配置
 static _process ReadProcess(const string& conf_str){
     vector<json> confs = FlatImports(strsplit(conf_str,";"));
     _process process;
-    for(auto& conf:confs){
-        try{
-            string name=conf["_name"];
-            AvLog("加载配置:%s",name.c_str());  //DEBUG
-            AvLog("%s",conf.dump(2).c_str());  //DEBUG
-            if(conf["type"]!="in") throw "配置"+name+"不是输入配置";
+    for (auto it=confs.rbegin() ; it!=confs.rend() ; ++it) {
+        auto& conf = *it;
+        try {
+            string name = conf["_name"];
+            // AvLog("加载配置:%s",name.c_str());  //DEBUG
+            // AvLog("%s",conf.dump(2).c_str());  //DEBUG
+            if (conf["type"] != "in") throw "配置"+name+"不是输入配置";
             //TODO 读取处理配置
-            if(conf["upscale"]["enable"].is_boolean()){
-                auto& json_v=conf["upscale"];
-                if(json_v["enable"]){
-                    auto& pro_v=process.upscale.emplace();
-                    pro_v.engine=json_v.value("engine", "real-cugan");
-                    pro_v.use_gpu=json_v.value("use_gpu", false);
-                    pro_v.model=json_v.value("model", "models-nose");
-                    pro_v.upscale=json_v.value("upscale", 2);
-                    pro_v.denoise=json_v.value("denoise", 0);
-                }else{
+            if (conf["upscale"]["enable"].is_boolean()){
+                auto& json_v = conf["upscale"];
+                if (json_v["enable"]) {
+                    auto& pro_v = process.upscale.emplace();
+                    pro_v.engine = json_v.value("engine", "real-cugan");
+                    pro_v.use_gpu = json_v.value("use_gpu", false);
+                    pro_v.model = json_v.value("model", "models-nose");
+                    pro_v.upscale = json_v.value("upscale", 2);
+                    pro_v.denoise = json_v.value("denoise", 0);
+                } else {
                     process.upscale.reset();
                 }
             }
-            if(conf["interpolation"]["enable"].is_boolean()){
-                auto& json_v=conf["interpolation"];
-                if(json_v["enable"]){
-                    auto& pro_v=process.interpolation.emplace();
-                    pro_v.engine=tolower((string)json_v["engine"]);
-                    pro_v.process=json_v.value("process", true);
-                    pro_v.target_fps=json_v.value("target_fps", 60);
-                    if(pro_v.engine=="rife"){
-                        RifeFrameGetter::Args *args=new RifeFrameGetter::Args;
-                        args->use_gpu=json_v.value("use_gpu", true);
-                        args->model=json_v.value("model", "rife-v4.22-lite");
-                        pro_v.args=args;
+            if (conf["interpolation"]["enable"].is_boolean()) {
+                auto& json_v = conf["interpolation"];
+                if (json_v["enable"]) {
+                    auto& pro_v = process.interpolation.emplace();
+                    pro_v.engine = tolower((string)json_v["engine"]);
+                    pro_v.process = json_v.value("process", true);
+                    pro_v.target_fps = json_v.value("target_fps", 60.0);
+                    if (pro_v.engine == "rife") {
+                        RifeFrameGetter::Args *args = new RifeFrameGetter::Args;
+                        args->use_gpu = json_v.value("use_gpu", true);
+                        args->model = json_v.value("model", "rife-v4.22-lite");
+                        pro_v.args = args;
                     }
-                }else{
+                } else {
                     process.interpolation.reset();
                 }
             }
-        }catch(string err){
+        } catch (string err) {
             ThrowErr(err);
-        }catch(exception err){
+        } catch (exception err) {
             ThrowErr(err.what());
         }
     }
     return process;
 }
 
-bool Task::_taskTranscode(){
-    //设置输出目标配置
-    vector<_target> targets = ReadTargets(getStr(args,"conf_out"));
-    if(targets.empty()) ThrowErr("请指定视频输出配置");
-    const int num_out=targets.size();
+// 根据编码器名称找到编码器
+static const AVCodec* searchEncoder(const std::string &codec_name){
+    const AVCodec *codec = avcodec_find_encoder_by_name(codec_name.c_str());
+    if(!codec) codec = avcodec_find_decoder_by_name(codec_name.c_str());
+    if(!codec) ThrowErr("找不到编码器"+codec_name);
+    return avcodec_find_encoder(codec->id);
+}
 
-    //TODO 读取处理配置
-    _process process_cfg=ReadProcess(getStr(args,"conf_in"));
+bool Task::_taskTranscode(){
+    // 设置输出目标配置
+    vector<_target> targets = ReadTargets(getStr("conf_out"));
+    if (targets.empty()) ThrowErr("请指定视频输出配置");
+    const int num_out = targets.size();
+
+    // 读取处理配置
+    _process process_cfg = ReadProcess(getStr("conf_in"));
+
+    AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+    AvLog("Task: Transcode\n");
+    AvLog("Targets: %d\n", num_out);
+    if (process_cfg.upscale) AvLog("  + upscale\n");
+    if (process_cfg.interpolation) AvLog("  + interpolation\n");
+    AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 
     // 构建输出目标并执行
-    for(int i=0; i<inputs.size() ; ++i){
-        auto& vd_in=inputs[i];
+    // i：输入视频序号
+    for (int i=0 ; i<inputs.size() ; ++i) {
+        auto& vd_in = inputs[i];
+        vd_in.print();
+        auto& info = vd_in.getInfo();
 
-        int outw=vd_in.width, outh=vd_in.height;
-        AVRational outfps=vd_in.fps;
+        int outw=info.width, outh=info.height;
+        AVRational outfps = info.fps;
 
         shared_ptr<VideoFrameReader> vfr = make_shared<VideoFrameReader>(vd_in, true);
         shared_ptr<IFreamGetter> frameReader = vfr;
         
-        //TODO 添加帧处理
-        if(process_cfg.upscale){
+        // 初始化帧处理程序
+        if (process_cfg.upscale) {
+            // TODO 支持超分处理
             ThrowErr("暂不支持超分");
         }
-        if(process_cfg.interpolation){
-            auto& cfg=process_cfg.interpolation.value();
-            if(cfg.engine=="rife"){
-                auto rifeGetter=make_shared<RifeFrameGetter>(frameReader,*(RifeFrameGetter::Args*)cfg.args);
-                AVRational fpsx=av_div_q(av_d2q(cfg.target_fps, 1000000),{(int)round(av_q2d(vd_in.fps)),1});
-                outfps=av_mul_q(outfps,fpsx);
-                rifeGetter->SetFPSX(fpsx);
+        if (process_cfg.interpolation) {
+            auto& cfg = process_cfg.interpolation.value();
+            if (cfg.engine == "rife") {
+                auto rifeGetter = make_shared<RifeFrameGetter>(frameReader,*(RifeFrameGetter::Args*)cfg.args);
+                // 计算插帧倍率和最终帧率，原帧率四舍五入（23.976 -> 24）
+                AVRational fpsx = av_div_q(
+                    av_d2q(cfg.target_fps, 1000000)
+                    , {(int)round(av_q2d(info.fps)),1}
+                );
+                outfps = av_mul_q(outfps,fpsx);
+                rifeGetter->setFPSX(fpsx);
                 if(cfg.process){
-                    string scob_path=vd_in.path+".scob";
+                    string scob_path=vd_in.getPath()+".scob";
                     try{
-                        Score s=Score::LoadScob(scob_path);
-                        rifeGetter->SetProcess(true,&s);
+                        Score s = Score::LoadScob(scob_path);
+                        rifeGetter->setProcess(true, &s);
                     }catch(...){
-                        AvLog("文件%s打开失败，跳过帧处理",scob_path.c_str());
+                        AvLog("文件%s打开失败，跳过帧处理\n",scob_path.c_str());
                     }
                 }
-                frameReader=rifeGetter;
+                frameReader = rifeGetter;
             }
         }
 
-        map<fs::path,bool> exist_files;
+        // 计算当前任务每个输出文件的路径
+        unordered_map<fs::path,bool> exist_files;
         vector<OutputVideo> outputs;
         vector<PacketWriter> writers;
         vector<FrameConvert> converters;
-        for(auto& target:targets){
-            // 计算输出路径
-            fs::path path=vd_in.path;
+        for(auto& target: targets){
+            fs::path path = vd_in.getPath();
             path.replace_extension(target.ext);
+            // 防止重名输出
             {
-                string originName=path.stem().string();
-                for(int i=0; fs::exists(path)||exist_files[path] ; ++i){
+                string originName = path.stem().string();
+                for(int i=0 ; fs::exists(path)||exist_files[path] ; ++i){
                     path.replace_filename(originName+"-"+to_string(i)+".0").replace_extension(target.ext);
                 }
                 exist_files[path]=true;
             }
-
             // 生成输出视频文件
-            auto& vd_out=outputs.emplace_back(path.string());
-            vd_out.SetFormat(target.format)
-                .SetEncoder((const AVCodec*)AssertP(searchEncoder(target.coder)))
-                .SetPixelFormat((AVPixelFormat)AssertI(av_get_pix_fmt(target.pix_fmt.c_str())))
-                .SetFPS(vd_in.fps)
-                .SetVSTimebase(vd_in.v_stream->time_base)
-                .SetOption("crf", target.crf);
+            auto& vd_out = outputs.emplace_back(path.string());
+            vd_out.setFormat(target.format)
+                .setEncoder(searchEncoder(target.coder))
+                .setPixelFormat((AVPixelFormat)AssertI(av_get_pix_fmt(target.pix_fmt.c_str())))
+                .setFPS(outfps)
+                .setVSTimebase(vd_in.getVS()->time_base)
+                .setOption("crf", target.crf);
             // 计算输出宽高
             {
-                const int ALIGN=2;
+                const int ALIGN=2;  // 宽高为2的倍数
                 int _tmpi;
-                double _tmpd=av_q2d(vd_in.sar), w=outw, h=outh;
-                if(_tmpd<1) w*=_tmpd;
-                else if(_tmpd>1) h/=_tmpd;
+                double _tmpd=av_q2d(info.sar), w=outw, h=outh;
+                // 还原真实像素大小
+                if (_tmpd <  1) w*=_tmpd;
+                else if (_tmpd > 1) h/=_tmpd;
+                // 统一为"宽>高"方便处理
                 int& maxw=target.maxw, maxh=target.maxh;
-                if(maxw<maxh){ _tmpi=maxw, maxw=maxh, maxh=_tmpi; }
-                const bool vertical=outw<=outh;
-
-                if(vertical) _tmpd=w, w=h, h=_tmpd;
-                if(maxw>0 && w>maxw){
-                    h=maxw*h/w;
-                    w=maxw;
+                if (maxw < maxh) { _tmpi=maxw, maxw=maxh, maxh=_tmpi; }
+                // 竖屏视频
+                const bool vertical = outw<=outh;
+                if (vertical) _tmpd=w, w=h, h=_tmpd;
+                if (maxw>0 && w>maxw) {   // 宽度超限制
+                    h = maxw*h/w;
+                    w = maxw;
                 }
-                if(maxh>0 && h>maxh){
-                    w=maxh*w/h;
-                    h=maxh;
+                if (maxh>0 && h>maxh) {   // 高度超限制
+                    w = maxh*w/h;
+                    h = maxh;
                 }
-                if(vertical) _tmpd=w, w=h, h=_tmpd;
-                w=round(w/ALIGN)*ALIGN;
-                h=round(h/ALIGN)*ALIGN;
+                if (vertical) _tmpd=w, w=h, h=_tmpd;
+                // 转化为2的倍数
+                w = round(w/ALIGN)*ALIGN;
+                h = round(h/ALIGN)*ALIGN;
 
-                vd_out.SetWxH(w, h);
-                converters.emplace_back(w,h,vd_out.pix_fmt);
+                vd_out.setWxH(w, h);
+                converters.emplace_back(w, h, vd_out.getInfo().pix_fmt);
             }
-
-            for(auto& a_stream:vd_in.a_streams)
-                vd_out.AddAudio(a_stream);
-
+            // 复制音频流
+            for(auto& a_stream: vd_in.getASs())
+                vd_out.addAudio(a_stream);
+            // 创建PacketWriter并为每个流配置映射
             writers.emplace_back(vd_out, vd_in);
         }
 
         // 转码
         PacketReader pkt_reader(vd_in);
-        AVPacket* pkt=nullptr;
-        AVFrame* fr=nullptr;
-        PacketWriter *pw=writers.data();
-        FrameConvert *fc=converters.data();
-        int frame_num=0;
+        AVPacket* pkt = nullptr;
+        AVFrame* fr = nullptr;
+        PacketWriter *pw = writers.data();
+        FrameConvert *fc = converters.data();
+        int frame_num = 0;
         AVMediaType type;
-        while(pkt=pkt_reader.NextPacket()){
-            type=vd_in.fmt_ctx->streams[pkt->stream_index]->codecpar->codec_type;
-            if(type==AVMEDIA_TYPE_VIDEO){
-                vfr->AddPacket(pkt);
-                while(fr=frameReader->NextFrame()){
-                    fr->pict_type=AVPictureType::AV_PICTURE_TYPE_NONE;
-                    for(int j=0 ; j<num_out ; ++j)
-                        pw[j].SendVideoFrame(fc[i].Convert(fr));
+        AVStream** IN_STREAMS = vd_in.getFormatContext()->streams;
+        while ((pkt = pkt_reader.NextPacket()) && !GlobalConfig.interrupted) {
+            type = IN_STREAMS[pkt->stream_index]->codecpar->codec_type;
+            if (type == AVMEDIA_TYPE_VIDEO) {
+                vfr->addPacket(pkt);    // 解析输入的视频packet
+                while (fr = frameReader->nextFrame()) {
+                    fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
+                    for (int j=0 ; j<num_out ; ++j)  // 为每个输出文件写入转换后对应的帧
+                        pw[j].sendVideoFrame(fc[j].convert(fr));
                     ++frame_num;
                 }
-            }else if(type==AVMEDIA_TYPE_AUDIO){
-                for(int j=0 ; j<num_out ; ++j){
-                    pw[j].SendPacket(pkt);
+            } else if (type == AVMEDIA_TYPE_AUDIO) {
+                AVRational* a_in_timebase = &(IN_STREAMS[pkt->stream_index]->time_base);
+                for (int j=0 ; j<num_out ; ++j) {
+                    pw[j].sendPacket(pkt, a_in_timebase);
                 }
             }
             av_packet_unref(pkt);
         }
-        vfr->AddPacket(NULL);
-        while(fr=frameReader->NextFrame()){
-            fr->pict_type=AVPictureType::AV_PICTURE_TYPE_NONE;
-            for(int j=0 ; j<num_out ; ++j)
-                pw[j].SendVideoFrame(fc[i].Convert(fr));
+        // 处理剩余帧
+        vfr->addPacket(NULL);
+        while ((fr = frameReader->nextFrame()) && !GlobalConfig.interrupted) {
+            fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
+            for (int j=0 ; j<num_out ; ++j)
+                pw[j].sendVideoFrame(fc[j].convert(fr));
             ++frame_num;
         }
-        for(int j=0 ; j<num_out ; ++j)
-            pw[j].WriteEnd(); // 清除缓冲区
+        for (int j=0 ; j<num_out ; ++j)
+            pw[j].writeEnd(); // 清除缓冲区
     }
     return true;
 }

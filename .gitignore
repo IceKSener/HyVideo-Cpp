@@ -1,5 +1,6 @@
 /out
 /bin
+/build
 test.cmake
 * copy
 *.hex.h

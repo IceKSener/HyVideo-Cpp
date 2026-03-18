@@ -2,24 +2,18 @@
 
 using namespace std;
 
-Task::Task(Task &&t){
-    type = t.type;
-    inputs = std::move(t.inputs);
-    args = std::move(t.args);
-}
-
 InputVideo& Task::addInput(string path){
     return inputs.emplace_back(path);
 }
 
-string Task::getStr(TaskArgs args, const string key, const string& def){
+string Task::getStr(const string key, const string& def){
     return args[key].value_or(def);
 }
-int Task::getInt(TaskArgs args, const string key, int def){
+int Task::getInt(const string key, int def){
     if(args[key].has_value()) return atoi(args[key].value().c_str());
     return def;
 }
-double Task::getReal(TaskArgs args, const string key, double def){
+double Task::getReal(const string key, double def){
     if(args[key].has_value()) return atof(args[key].value().c_str());
     return def;
 }

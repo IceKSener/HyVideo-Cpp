@@ -1,10 +1,11 @@
 #ifndef PACKETREADER_HPP
 #define PACKETREADER_HPP 1
 
-#include "InputVideo.hpp"
 extern "C"{
     #include "libavformat/avformat.h"
 }
+
+#include "InputVideo.hpp"
 
 class PacketReader{
 private:

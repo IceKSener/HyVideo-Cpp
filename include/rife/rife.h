@@ -24,6 +24,7 @@ public:
 
     ncnn::Mat process_buf(const ncnn::Mat& in0image, const ncnn::Mat& in1image, float timestep, ncnn::Mat& outimage);
     void buf_next();
+    void buf_clear();
 
 private:
     class GpuContext;
@@ -80,7 +81,6 @@ private:
     std::vector<ncnn::Mat> buf1;
     std::vector<ncnn::VkMat> buf0_gpu;
     std::vector<ncnn::VkMat> buf1_gpu;
-    int width,height,channels;
 };
 
 #endif // RIFE_H
