@@ -54,3 +54,17 @@ bool findConf(path& out, const string &name, const path& dir) {
     }
     return false;
 }
+std::string getTimeStr(int64_t pts, AVRational timebase) {
+    if (timebase.den == 0) return "<None>";
+    double time = pts * timebase.num / (double) timebase.den;
+    char buf[50];
+    if (time < 0) {
+        buf[0] = '-';
+        time = -time;
+    }
+    int hour, min;
+    hour=time/3600; time-=hour*3600;
+    min=time/60; time-=min*60;
+    sprintf(buf, "%02d:%02d:%06.3lf", hour, min, time);
+    return string(buf);
+}

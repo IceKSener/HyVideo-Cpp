@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
     }
 
     for(Task& task: tasks) {
+        if (GlobalConfig.interrupted) break;
         try {
             task.Run();
         } catch(string errMsg) {

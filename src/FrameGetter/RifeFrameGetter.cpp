@@ -6,9 +6,23 @@ extern "C"{
 
 #include "utils/Assert.hpp"
 #include "utils/Clocker.hpp"
+#include "utils/Logger.hpp"
+#include "utils/FileStr.hpp"
 
 using namespace std;
 using Mat=ncnn::Mat;
+
+static AVFrame* rescaleFrame(AVFrame* fr, const AVRational& timebase, double pts) {
+    if (timebase.den < 500) {
+        // 解决时间戳精度不足的错误
+        fr->time_base = AV_TIME_BASE_Q;
+        fr->pts = pts*AV_TIME_BASE*av_q2d(timebase)+0.5;
+    } else {
+        fr->time_base = timebase;
+        fr->pts = pts + 0.5;
+    }
+    return fr;
+}
 
 RifeFrameGetter::RifeFrameGetter(const shared_ptr<IFreamGetter>& getter, const Args& args)
     : getter(getter)
@@ -140,7 +154,6 @@ AVFrame* RifeFrameGetter::_makeMiddelFrame(double timestep) {
     }
     // DEBUG
     clocker.start(20);
-    // mo = rife->process(m0, m1, timestep, mo);
     mo = status.rife->process_buf(m0, m1, timestep, mo);
     clocker.end(20);
     av_frame_unref(fr);
@@ -149,14 +162,7 @@ AVFrame* RifeFrameGetter::_makeMiddelFrame(double timestep) {
     fr->format = AV_PIX_FMT_RGB24;
     AssertI(av_image_fill_arrays(fr->data, fr->linesize, (uint8_t*)mo.data, AV_PIX_FMT_RGB24, w, h, 1));
     
-    double pts = (f1_pts-f0_pts)*timestep + f0_pts;
-    fr->time_base = f1->time_base;
-    fr->pts = pts + 0.5;
-    if (fr->time_base.den < 500) {
-        // 解决时间戳精度不足的错误
-        fr->time_base = AV_TIME_BASE_Q;
-        fr->pts = pts*AV_TIME_BASE*av_q2d(f1->time_base)+0.5;
-    }
+    rescaleFrame(fr, f1->time_base, f0_pts+(f1_pts-f0_pts)*timestep);
     ++fr_index;
     return fr;
 }
@@ -189,6 +195,7 @@ AVFrame* RifeFrameGetter::_nextFrameProcess(){
             if (getter->isEnd()) break; // 将最后读取到的帧作为f1
             else return nullptr;
         }
+        AvLog("跳过静帧[%5d](%s)\n", f1_index, getTimeStr(f1_pts, f1->time_base).c_str());
         f1_pts = f1->pts;
         ++f1_index;
         rgb_valid[1] = false;
@@ -229,6 +236,7 @@ AVFrame* RifeFrameGetter::_nextFrameProcess(){
                 if (getter->isEnd()) break;
                 else return nullptr;
             }
+            AvLog("跳过静帧[%5d](%s)\n", f1_index, getTimeStr(f1_pts, f1->time_base).c_str());
             f1_pts = f1->pts;
             ++f1_index;
             rgb_valid[1] = false;
@@ -242,11 +250,10 @@ AVFrame* RifeFrameGetter::_nextFrameProcess(){
     double timestep = (double)(fr_pos.num-f0_index*fr_pos.den)/(fr_pos.den*(f1_index-f0_index));
     // 判断f1是否为转场帧
     if (prcs > 0) {
+        AvLog("转场帧[%5d](%s)\n", f1_index, getTimeStr(f1_pts, f1->time_base).c_str());
         av_frame_unref(fr);
         av_frame_ref(fr, f0);
-        // pts=round( f0_pts+(f1_pts-f0_pts)*timestep )
-        fr->time_base = f1->time_base;
-        fr->pts = f0_pts+(f1_pts-f0_pts)*timestep+0.5;
+        rescaleFrame(fr, f1->time_base, f0_pts+(f1_pts-f0_pts)*timestep);
         ++fr_index;
         return fr;
     }

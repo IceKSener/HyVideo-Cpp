@@ -325,16 +325,22 @@ bool Task::_taskTranscode(){
         }
 
         // 转码
+        int frame_num = 0;
+        int64_t& bytesRead = vd_in.getFormatContext()->pb->bytes_read;
+        int64_t bytesProcessed = 0;
+        const string TotalTime = getTimeStr(vd_in.getVS()->duration, vd_in.getVS()->time_base);
+
         PacketReader pkt_reader(vd_in);
-        AVPacket* pkt = nullptr;
-        AVFrame* fr = nullptr;
         PacketWriter *pw = writers.data();
         FrameConvert *fc = converters.data();
-        int frame_num = 0;
-        AVMediaType type;
+        AVPacket* pkt = nullptr;
+        AVFrame* fr = nullptr;
         AVStream** IN_STREAMS = vd_in.getFormatContext()->streams;
+        AVStream* _stream;
+        AVMediaType type;
         while ((pkt = pkt_reader.NextPacket()) && !GlobalConfig.interrupted) {
-            type = IN_STREAMS[pkt->stream_index]->codecpar->codec_type;
+            _stream = IN_STREAMS[pkt->stream_index];
+            type = _stream->codecpar->codec_type;
             if (type == AVMEDIA_TYPE_VIDEO) {
                 vfr->addPacket(pkt);    // 解析输入的视频packet
                 while (fr = frameReader->nextFrame()) {
@@ -344,10 +350,14 @@ bool Task::_taskTranscode(){
                     ++frame_num;
                 }
             } else if (type == AVMEDIA_TYPE_AUDIO) {
-                AVRational* a_in_timebase = &(IN_STREAMS[pkt->stream_index]->time_base);
+                AVRational* a_in_timebase = &(_stream->time_base);
                 for (int j=0 ; j<num_out ; ++j) {
                     pw[j].sendPacket(pkt, a_in_timebase);
                 }
+            }
+            if (bytesRead-bytesProcessed > 2*1024*1024) {
+                bytesProcessed = bytesRead;
+                AvLog("Frame[%5d] : %s / %s\n", frame_num, getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
             }
             av_packet_unref(pkt);
         }
