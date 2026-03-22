@@ -29,6 +29,7 @@ RifeFrameGetter::RifeFrameGetter(const shared_ptr<IFreamGetter>& getter, const A
 {
     info.model = args.model;
     info.use_gpu = args.use_gpu;
+    info.gpu_index = args.gpu_index;
     AssertP(status.f0 = av_frame_alloc());
     AssertP(status.f1 = av_frame_alloc());
     AssertP(status.f0_rgb = av_frame_alloc());
@@ -99,8 +100,14 @@ void RifeFrameGetter::_initRIFE(){
         return;
     }
     string model_dir = "./models/RIFE/" + model;
-    // TODO 分析输入模型的类型和参数
-    status.rife = new RIFE(info.use_gpu?0:-1, false, false, false, 1, false, true);
+
+    bool rife_v2=false, rife_v4=false;
+    // TODO 分析输入模型的参数(TTA，uhd等)和GPU选择
+    bool tta_mode = false, tta_temporal_mode = false, uhd_mode = false;
+    if (model.find("rife-v2") != string::npos)      rife_v2 = true;
+    else if (model.find("rife-v3") != string::npos) rife_v2 = true;
+    else if (model.find("rife-v4") != string::npos) rife_v4 = true;
+    status.rife = new RIFE(info.use_gpu?info.gpu_index:-1, tta_mode, tta_temporal_mode, uhd_mode, 1, rife_v2, rife_v4);
 #ifdef _WIN32
     if(status.rife->load(wstring(model_dir.begin(),model_dir.end()))) throw model+"模型打开失败";
 #else

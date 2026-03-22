@@ -14,8 +14,9 @@
 class RifeFrameGetter:public IFreamGetter{
 public:
     struct Args{
-        bool use_gpu=false;
-        std::string model="rife-v4.22-lite";
+        bool use_gpu = false;
+        int gpu_index = 0;
+        std::string model = "rife-v4.22-lite";
     };
 
     RifeFrameGetter(const std::shared_ptr<IFreamGetter>& getter, const Args& args);
@@ -31,6 +32,7 @@ private:
     struct _info {
         std::string model;
         bool use_gpu;
+        int gpu_index;
         AVRational fpsx = {1, 1};
         std::optional<std::vector<int8_t>> process;
         // 根据是否process决定使用的函数

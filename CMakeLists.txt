@@ -22,12 +22,12 @@ file(GLOB_RECURSE other_cpp CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE rife_cpp src/rife/*.cpp)
 add_executable(HyVideo HyVideo.cpp ${other_cpp})
 # add_executable(Test Test.cpp)
-add_executable(Mid_Rife Mid_Rife.cpp ${rife_cpp})
+# add_executable(Mid_Rife Mid_Rife.cpp ${rife_cpp})
 
 target_link_libraries(HyVideo ${FFMPEG_LIBRARIES} ncnn)
 # target_link_libraries(Test ${FFMPEG_LIBRARIES} ncnn)
 # target_sources(Test PRIVATE src/Common.cpp)
-target_link_libraries(Mid_Rife ${FFMPEG_LIBRARIES} ncnn)
+# target_link_libraries(Mid_Rife ${FFMPEG_LIBRARIES} ncnn)
 # target_sources(Mid_Rife PRIVATE src/Common.cpp)
 
 

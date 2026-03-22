@@ -182,6 +182,7 @@ static _process ReadProcess(const string& conf_str){
                         RifeFrameGetter::Args *args = new RifeFrameGetter::Args;
                         args->use_gpu = json_v.value("use_gpu", true);
                         args->model = json_v.value("model", "rife-v4.22-lite");
+                        if (args->use_gpu) args->gpu_index = json_v.value("gpu_index", 0);
                         pro_v.args = args;
                     }
                 } else {
