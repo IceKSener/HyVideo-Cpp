@@ -30,17 +30,10 @@ PacketWriter::PacketWriter(OutputVideo &vd) {
     out_timebase = vd.getVSTimebase();
 }
 
-PacketWriter::PacketWriter(OutputVideo &vd, InputVideo &vd_in): PacketWriter(vd) {
-    // 为每个流序号建立映射
-    // TODO bug 与OutVideo的addAudio可能冲突
-    const auto& in_as = vd_in.getASs();
-    const auto& out_as = vd.getASs();
-    int as_sz = min(in_as.size(), out_as.size());
-    stream_mapping = new int[as_sz+1];
-    stream_mapping[vd_in.getVS()->index]=vd.getVS()->index;
-    for (int i=0 ; i<as_sz ; ++i){
-        stream_mapping[in_as[i]->index] = out_as[i]->index;
-    }
+PacketWriter& PacketWriter::setMapping(const unordered_map<int,int> mapping) {
+    if (!stream_mapping) stream_mapping = new unordered_map<int,int>;
+    *stream_mapping = mapping;
+    return *this;
 }
 
 PacketWriter::PacketWriter(PacketWriter &&pw) {
@@ -58,12 +51,12 @@ PacketWriter::~PacketWriter() {
     if (pkt_buf) av_packet_free(&pkt_buf);
     if (pkt_ref) av_packet_free(&pkt_ref);
     if (fr_ref) av_frame_free(&fr_ref);
-    if (stream_mapping) delete[] stream_mapping;
+    if (stream_mapping) delete stream_mapping;
 }
 
 PacketWriter& PacketWriter::sendPacket(AVPacket *pkt, const AVRational* in_timebase){
     Assert(av_packet_ref(pkt_ref, pkt));
-    if (stream_mapping) pkt_ref->stream_index = stream_mapping[pkt_ref->stream_index];
+    if (stream_mapping) pkt_ref->stream_index = (*stream_mapping)[pkt_ref->stream_index];
     if (in_timebase) av_packet_rescale_ts(pkt_ref, *in_timebase, fmt_ctx->streams[pkt_ref->stream_index]->time_base);
     Assert(av_interleaved_write_frame(fmt_ctx, pkt_ref));
     return *this;

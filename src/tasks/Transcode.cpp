@@ -317,11 +317,17 @@ bool Task::_taskTranscode(){
                 vd_out.setWxH(w, h);
                 converters.emplace_back(w, h, vd_out.getInfo().pix_fmt);
             }
+            // 为每个流配置映射
+            unordered_map<int,int> mapping;
             // 复制音频流
-            for(auto& a_stream: vd_in.getASs())
-                vd_out.addAudio(a_stream);
-            // 创建PacketWriter并为每个流配置映射
-            writers.emplace_back(vd_out, vd_in);
+            for(auto& a_stream: vd_in.getASs()) {
+                AVStream* new_audio = vd_out.addAudio(a_stream);
+                mapping[a_stream->index] = new_audio->index;
+            }
+            mapping[vd_in.getVS()->index] = vd_out.getVS()->index;
+            // 创建PacketWriter
+            writers.emplace_back(vd_out)
+                .setMapping(mapping);
         }
 
         // 转码

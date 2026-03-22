@@ -1,6 +1,8 @@
 #ifndef PACKETWRITER_HPP
 #define PACKETWRITER_HPP 1
 
+#include <unordered_map>
+
 extern "C"{
     #include "libavformat/avformat.h"
     #include "libavcodec/avcodec.h"
@@ -13,7 +15,7 @@ class PacketWriter{
 public:
     PacketWriter(OutputVideo& vd);
     // 附带流索引映射
-    PacketWriter(OutputVideo& vd, InputVideo& vd_in);
+    PacketWriter& setMapping(const std::unordered_map<int,int> mapping);
     PacketWriter(PacketWriter&& pw);
     ~PacketWriter();
     //写入Packet
@@ -23,7 +25,7 @@ public:
     //写入文件结尾，并将缓存内容写入清空
     PacketWriter& writeEnd();
 private:
-    int *stream_mapping = nullptr;
+    std::unordered_map<int,int> *stream_mapping = nullptr;
     AVPacket *pkt_buf = nullptr, *pkt_ref=nullptr;
     AVFrame *fr_ref = nullptr;
     AVFormatContext *fmt_ctx = nullptr;

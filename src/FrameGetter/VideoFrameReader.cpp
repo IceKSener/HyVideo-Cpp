@@ -34,7 +34,7 @@ VideoFrameReader::~VideoFrameReader() {
     if (pkt_reader) delete pkt_reader;
 }
 
-VideoFrameReader &VideoFrameReader::addPacket(AVPacket *pkt) {
+VideoFrameReader &VideoFrameReader::addPacket(const AVPacket *pkt) {
     Assert(avcodec_send_packet(ctx, pkt));
     if(!pkt) is_end = true;
     return *this;

@@ -17,7 +17,7 @@ public:
     VideoFrameReader(VideoFrameReader&& vfr);
     ~VideoFrameReader();
     // 添加Packet，不会unref传入的pkt
-    VideoFrameReader& addPacket(AVPacket *pkt);
+    VideoFrameReader& addPacket(const AVPacket *pkt);
     // 读取视频下一帧，读不到（结束或需要Packet）则返回nullptr
     AVFrame* nextFrame(AVFrame *fr=nullptr) override;
     bool isEnd() override{ return is_end; }

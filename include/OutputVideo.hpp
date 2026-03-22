@@ -26,15 +26,15 @@ public:
     OutputVideo& setVSTimebase(const AVRational& time_base){ info.vs_timebase=time_base; return *this; }
     OutputVideo& setPixelFormat(AVPixelFormat pix_fmt){ info.pix_fmt=pix_fmt; return *this; }
     OutputVideo& setOption(const std::string& key, int value){ av_dict_set_int(&opt,key.c_str(),value,0); return *this; }
-    // 复制音频流
-    OutputVideo& addAudio(const AVStream *input_audio);
+    // 复制音频流，返回输出视频的音频流
+    AVStream* addAudio(const AVStream *input_audio);
 
     // 利用设置好的信息创建上下文
     OutputVideo& initOutput();
-    bool isInit(){ return is_init; }
-    bool isOpen(){ return is_open; }
     // 创建输出文件，准备写入数据（仅由PacketWriter调用）
     OutputVideo& openOutput();
+    bool isInit(){ return is_init; }
+    bool isOpen(){ return is_open; }
     void print();
 
     const std::string& getPath() const{ return path; }

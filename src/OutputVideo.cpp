@@ -75,9 +75,9 @@ OutputVideo& OutputVideo::openOutput() {
     return *this;
 }
 
-OutputVideo &OutputVideo::addAudio(const AVStream *input_audio) {
+AVStream* OutputVideo::addAudio(const AVStream *input_audio) {
     if(is_open) ThrowErr("文件已开始写入，无法添加新的流");
-    if(input_audio->codecpar->codec_type != AVMEDIA_TYPE_AUDIO) return *this;
+    if(input_audio->codecpar->codec_type != AVMEDIA_TYPE_AUDIO) return nullptr;
     if(!is_init) initOutput();
     AVStream *new_audio;
     AssertP(new_audio = avformat_new_stream(fmt_ctx, NULL));
@@ -85,7 +85,7 @@ OutputVideo &OutputVideo::addAudio(const AVStream *input_audio) {
     new_audio->time_base = input_audio->time_base;
     new_audio->codecpar->codec_tag = 0;     // 解决MP4转MKV时音频转换的错误
     a_streams.push_back(new_audio);
-    return *this;
+    return new_audio;
 }
 
 void OutputVideo::print() {
