@@ -58,17 +58,12 @@ static double _getMSE(const AVFrame *f1, const AVFrame *f2){
 static vector<double> CalcMSE(InputVideo& vd) {
     vector<double> result(1, 0);
     VideoFrameReader vfr(vd);
-    AVFrame *f1, *f2, *tmp;
-    AssertP(f1 = av_frame_alloc());
-    AssertP(f2 = av_frame_alloc());
+    HvFrame f1, f2;
     if (!vfr.nextFrame(f1)) ThrowErr("无法读取视频帧");
     while (vfr.nextFrame(f2) ){
-        result.push_back(_getMSE(f1, f2));
-        av_frame_unref(f1);
-        tmp=f1, f1=f2, f2=tmp;
+        result.push_back(_getMSE(f1.fr, f2.fr));
+        f1.swap(f2);
     }
-    av_frame_free(&f1);
-    av_frame_free(&f2);
     return result;
 }
 

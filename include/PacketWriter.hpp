@@ -10,6 +10,7 @@ extern "C"{
 
 #include "OutputVideo.hpp"
 #include "InputVideo.hpp"
+#include "entry/HvFrame.hpp"
 
 class PacketWriter{
 public:
@@ -21,13 +22,13 @@ public:
     //写入Packet
     PacketWriter& sendPacket(AVPacket *pkt, const AVRational* in_timebase = nullptr);
     //写入Frame，缓存在内部Packet中
-    PacketWriter& sendVideoFrame(const AVFrame *fr);
+    PacketWriter& sendVideoFrame(const HvFrame& fr);
     //写入文件结尾，并将缓存内容写入清空
     PacketWriter& writeEnd();
 private:
     std::unordered_map<int,int> *stream_mapping = nullptr;
     AVPacket *pkt_buf = nullptr, *pkt_ref=nullptr;
-    AVFrame *fr_ref = nullptr;
+    HvFrame fr_ref;
     AVFormatContext *fmt_ctx = nullptr;
     AVCodecContext *ctx = nullptr;
     AVRational out_timebase;

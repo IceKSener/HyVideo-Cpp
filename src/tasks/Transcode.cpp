@@ -341,7 +341,7 @@ bool Task::_taskTranscode(){
         PacketWriter *pw = writers.data();
         FrameConvert *fc = converters.data();
         AVPacket* pkt = nullptr;
-        AVFrame* fr = nullptr;
+        HvFrame fr_raw, fr_out;
         AVStream** IN_STREAMS = vd_in.getFormatContext()->streams;
         AVStream* _stream;
         AVMediaType type;
@@ -350,10 +350,10 @@ bool Task::_taskTranscode(){
             type = _stream->codecpar->codec_type;
             if (type == AVMEDIA_TYPE_VIDEO) {
                 vfr->addPacket(pkt);    // 解析输入的视频packet
-                while (fr = frameReader->nextFrame()) {
-                    fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
+                while (frameReader->nextFrame(fr_raw)) {
+                    fr_raw.fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
                     for (int j=0 ; j<num_out ; ++j)  // 为每个输出文件写入转换后对应的帧
-                        pw[j].sendVideoFrame(fc[j].convert(fr));
+                        pw[j].sendVideoFrame(fc[j].convert(fr_raw, fr_out));
                     ++frame_num;
                 }
             } else if (type == AVMEDIA_TYPE_AUDIO) {
@@ -370,10 +370,10 @@ bool Task::_taskTranscode(){
         }
         // 处理剩余帧
         vfr->addPacket(NULL);
-        while ((fr = frameReader->nextFrame()) && !GlobalConfig.interrupted) {
-            fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
+        while (frameReader->nextFrame(fr_raw) && !GlobalConfig.interrupted) {
+            fr_raw.fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
             for (int j=0 ; j<num_out ; ++j)
-                pw[j].sendVideoFrame(fc[j].convert(fr));
+                pw[j].sendVideoFrame(fc[j].convert(fr_raw, fr_out));
             ++frame_num;
         }
         for (int j=0 ; j<num_out ; ++j)

@@ -8,7 +8,6 @@ using namespace std;
 PacketWriter::PacketWriter(OutputVideo &vd) {
     AssertP(pkt_buf = av_packet_alloc());
     AssertP(pkt_ref = av_packet_alloc());
-    AssertP(fr_ref = av_frame_alloc());
     if (!vd.isInit()) vd.initOutput();
     auto& vd_info = vd.getInfo();
     fmt_ctx = vd.getFormatContext();
@@ -36,11 +35,12 @@ PacketWriter& PacketWriter::setMapping(const unordered_map<int,int> mapping) {
     return *this;
 }
 
-PacketWriter::PacketWriter(PacketWriter &&pw) {
+PacketWriter::PacketWriter(PacketWriter &&pw)
+    : fr_ref(move(pw.fr_ref))
+{
     stream_mapping=pw.stream_mapping; pw.stream_mapping=nullptr;
     pkt_buf=pw.pkt_buf; pw.pkt_buf=nullptr;
     pkt_ref=pw.pkt_ref; pw.pkt_ref=nullptr;
-    fr_ref=pw.fr_ref; pw.fr_ref=nullptr;
     fmt_ctx=pw.fmt_ctx;
     ctx=pw.ctx; pw.ctx=nullptr;
     out_timebase = pw.out_timebase;
@@ -50,7 +50,6 @@ PacketWriter::~PacketWriter() {
     if (ctx) avcodec_free_context(&ctx);
     if (pkt_buf) av_packet_free(&pkt_buf);
     if (pkt_ref) av_packet_free(&pkt_ref);
-    if (fr_ref) av_frame_free(&fr_ref);
     if (stream_mapping) delete stream_mapping;
 }
 
@@ -62,14 +61,12 @@ PacketWriter& PacketWriter::sendPacket(AVPacket *pkt, const AVRational* in_timeb
     return *this;
 }
 
-PacketWriter& PacketWriter::sendVideoFrame(const AVFrame *fr) {
-    if (!fr) return *this;
+PacketWriter& PacketWriter::sendVideoFrame(const HvFrame& fr) {
     // 将帧的时间基转为输出视频流的时间基
-    av_frame_ref(fr_ref, fr);
-    fr_ref->pts = av_rescale_q(fr->pts, fr->time_base, out_timebase);
-    fr_ref->time_base = out_timebase;
-    Assert(avcodec_send_frame(ctx, fr_ref));
-    av_frame_unref(fr_ref);
+    fr_ref = fr;
+    fr_ref.fr->pts = av_rescale_q(fr.fr->pts, fr.fr->time_base, out_timebase);
+    fr_ref.fr->time_base = out_timebase;
+    Assert(avcodec_send_frame(ctx, fr_ref.fr));
 
     int ret;
     while (true) {

@@ -7,13 +7,15 @@ extern "C"{
     #include "libswscale/swscale.h"
 }
 
+#include "entry/HvFrame.hpp"
+
 class FrameConvert {
 public:
     // 指定输出帧的格式
     FrameConvert(int dst_w, int dst_h, AVPixelFormat dst_f);
-    FrameConvert(FrameConvert&& fc);
+    FrameConvert(FrameConvert&& fc) = default;
     ~FrameConvert();
-    AVFrame* convert(AVFrame *fr, AVFrame *fr_out=nullptr);
+    HvFrame& convert(const HvFrame& fr_in, HvFrame& fr_out);
 private:
     struct FrameFormat {
         int width;
@@ -30,8 +32,8 @@ private:
     };
     
     std::unordered_map<FrameFormat,SwsContext*,FormatHash> sws_map;
-    AVFrame *fr_buf=nullptr;
-    const FrameFormat dst_format;
+    HvFrame fr_buf;
+    const FrameFormat dst_fmt;
 };
 
 
