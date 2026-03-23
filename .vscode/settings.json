@@ -4,7 +4,7 @@
             "--strict",
             "-t", "2",
             // ":transcode:conf_out=vo",
-            ":transcode:conf_out=examOUT:conf_in=examIN",
+            ":transcode:conf_out=examOUT:conf_in=examIN-CUGAN",
             "W:/test.mp4",
         ]
     }

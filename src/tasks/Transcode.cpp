@@ -14,6 +14,7 @@ extern "C"{
 #include "OutputVideo.hpp"
 #include "FrameGetter/VideoFrameReader.hpp"
 #include "FrameGetter/RifeFrameGetter.hpp"
+#include "FrameGetter/RealCUGANFrameGetter.hpp"
 #include "FrameGetter/BufferFrameGetter.hpp"
 #include "GlobalConfig.hpp"
 #include "PacketReader.hpp"
@@ -43,12 +44,10 @@ struct _process{
     struct _upscale{
         bool use_gpu=false;
         string engine;
-        string model;
-        int upscale;
-        int denoise;
         void *args;
         ~_upscale(){
             if(args) return;
+            if(engine=="real-cugan") delete (RealCUGANFrameGetter::Args*)args;
         }
     };
     struct _interpolation{
@@ -157,16 +156,23 @@ static _process ReadProcess(const string& conf_str){
             // AvLog("加载配置:%s",name.c_str());  //DEBUG
             // AvLog("%s",conf.dump(2).c_str());  //DEBUG
             if (conf["type"] != "in") throw "配置"+name+"不是输入配置";
-            //TODO 读取处理配置
+            //TODO 读取超分处理配置
             if (conf["upscale"]["enable"].is_boolean()){
                 auto& json_v = conf["upscale"];
                 if (json_v["enable"]) {
                     auto& pro_v = process.upscale.emplace();
                     pro_v.engine = json_v.value("engine", "real-cugan");
-                    pro_v.use_gpu = json_v.value("use_gpu", false);
-                    pro_v.model = json_v.value("model", "models-nose");
-                    pro_v.upscale = json_v.value("upscale", 2);
-                    pro_v.denoise = json_v.value("denoise", 0);
+                    if (pro_v.engine == "real-cugan") {
+                        RealCUGANFrameGetter::Args *args = new RealCUGANFrameGetter::Args;
+                        args->use_gpu = json_v.value("use_gpu", true);
+                        args->model = json_v.value("model", "models-se");
+                        args->scale = json_v.value("scale", 2);
+                        args->noise = json_v.value("noise", -1);
+                        args->syncgap = json_v.value("syncgap", 3);
+                        args->tilesize = json_v.value("tilesize", 0);
+                        if (args->use_gpu) args->gpu_index = json_v.value("gpu_index", 0);
+                        pro_v.args = args;
+                    }
                 } else {
                     process.upscale.reset();
                 }
@@ -237,13 +243,26 @@ bool Task::_taskTranscode(){
         
         // 初始化帧处理程序
         if (process_cfg.upscale) {
-            // TODO 支持超分处理
-            ThrowErr("暂不支持超分");
+            auto& cfg = process_cfg.upscale.value();
+            if (cfg.engine == "real-cugan") {
+                RealCUGANFrameGetter::Args& args = *(RealCUGANFrameGetter::Args*)cfg.args;
+                // 若不超分也不降噪，直接跳过这步处理
+                if (args.scale!=1 || args.noise!=-1) {
+                    if (args.model.find("models-nose") != string::npos) args.syncgap = 0;
+                    auto realcuganGetter = make_shared<RealCUGANFrameGetter>(frameReader, args);
+                    frameReader = realcuganGetter;
+                    outw *= args.scale;
+                    outh *= args.scale;
+                }
+            } else {
+                if (GlobalConfig.exit_on_error) ThrowErr("未知补帧模型[" + cfg.engine + "]");
+                AvLog("未知超分辨率引擎[%s]，已跳过超分辨率", cfg.engine.c_str());
+            }
         }
         if (process_cfg.interpolation) {
             auto& cfg = process_cfg.interpolation.value();
             if (cfg.engine == "rife") {
-                auto rifeGetter = make_shared<RifeFrameGetter>(frameReader,*(RifeFrameGetter::Args*)cfg.args);
+                auto rifeGetter = make_shared<RifeFrameGetter>(frameReader, *(RifeFrameGetter::Args*)cfg.args);
                 // 计算插帧倍率和最终帧率，原帧率四舍五入（23.976 -> 24）
                 AVRational fpsx = av_div_q(
                     av_d2q(cfg.target_fps, 1000000)
@@ -261,6 +280,9 @@ bool Task::_taskTranscode(){
                     }
                 }
                 frameReader = rifeGetter;
+            } else {
+                if (GlobalConfig.exit_on_error) ThrowErr("未知补帧模型[" + cfg.engine + "]");
+                AvLog("未知补帧引擎[%s]，已跳过补帧", cfg.engine.c_str());
             }
         }
 

@@ -4,7 +4,6 @@
 #include  <memory>
 #include <unordered_map>
 
-#include "mat.h"
 #include "rife/rife.h"
 
 #include "IFrameGetter.hpp"
@@ -50,7 +49,6 @@ private:
     } status; // 保存输出状态
     std::shared_ptr<IFreamGetter> getter;
     FrameConvert *cvt = nullptr;
-    ncnn::Mat mo;   // 存储中间帧的像素数据
 
     // 获取/创建RIFE模型实例
     void _initRIFE();

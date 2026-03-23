@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 3.10.0)
 project(HyVideo VERSION 0.1.0 LANGUAGES C CXX)
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build" FORCE)
+endif()
 
 SET (project_dir ${CMAKE_CURRENT_LIST_DIR})
 SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY ${project_dir}/bin)
@@ -20,6 +23,7 @@ include_directories(${FFMPEG_INCLUDE_DIRS})
 
 file(GLOB_RECURSE other_cpp CONFIGURE_DEPENDS src/*.cpp)
 file(GLOB_RECURSE rife_cpp src/rife/*.cpp)
+file(GLOB_RECURSE realcugan_cpp src/realcugan/*.cpp)
 add_executable(HyVideo HyVideo.cpp ${other_cpp})
 # add_executable(Test Test.cpp)
 # add_executable(Mid_Rife Mid_Rife.cpp ${rife_cpp})
@@ -32,7 +36,9 @@ target_link_libraries(HyVideo ${FFMPEG_LIBRARIES} ncnn)
 
 
 # 查找所有 .comp 文件
-file(GLOB COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/rife/comps/*.comp")
+file(GLOB RIFE_COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/rife/comps/*.comp")
+file(GLOB REALCUGAN_COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/realcugan/comps/*.comp")
+list(APPEND COMP_FILES ${RIFE_COMP_FILES} ${REALCUGAN_COMP_FILES})
 # 收集生成的头文件
 set(GENERATED_HEADERS)
 # 遍历每个 .comp 文件
@@ -41,7 +47,8 @@ foreach(comp_file IN LISTS COMP_FILES)
     set(SHADER_SRC_ABS ${CMAKE_CURRENT_SOURCE_DIR}/${comp_file})
     # 输出头文件
     get_filename_component(fname_we ${comp_file} NAME_WE)
-    set(SHADER_COMP_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/include/rife/comps/${fname_we}.comp.hex.h)
+    get_filename_component(fname_dir ${comp_file} DIRECTORY)
+    set(SHADER_COMP_HEADER ${CMAKE_CURRENT_SOURCE_DIR}/${fname_dir}/${fname_we}.comp.hex.h)
     # 加入生成列表
     list(APPEND GENERATED_HEADERS ${SHADER_COMP_HEADER})
     # 调用脚本转换

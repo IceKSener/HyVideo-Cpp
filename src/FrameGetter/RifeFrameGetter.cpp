@@ -10,7 +10,7 @@ extern "C"{
 #include "utils/FileStr.hpp"
 
 using namespace std;
-using Mat=ncnn::Mat;
+using Mat = ncnn::Mat;
 
 static AVFrame* rescaleFrame(AVFrame* fr, const AVRational& timebase, double pts) {
     if (timebase.den < 500) {
@@ -37,7 +37,6 @@ RifeFrameGetter::RifeFrameGetter(RifeFrameGetter &&rfg)
     , status(move(rfg.status))
     , getter(move(rfg.getter))
     , cvt(rfg.cvt)
-    , mo(move(rfg.mo))
 {
     rfg.cvt = nullptr;
 }
@@ -76,25 +75,36 @@ bool RifeFrameGetter::nextFrame(HvFrame& fr) {
 void RifeFrameGetter::_initRIFE(){
     // TODO 不适合多线程使用一个模型实例
     const string& model = info.model;
-    if (status.rife = _rifes[model]) {
+
+    // TODO 分析输入模型的参数(TTA，uhd等)
+    bool tta_mode = false, tta_temporal_mode = false, uhd_mode = false;
+    
+    stringstream _key;
+    _key << model;
+    if (info.use_gpu) _key << "-G" << info.gpu_index;
+    if (tta_mode) _key << "-TTA";
+    if (tta_temporal_mode) _key << "-TTAT" ;
+    if (uhd_mode) _key << "-U";
+    const string key = _key.str();
+
+    if (status.rife = _rifes[key]) {
         status.rife->buf_clear();
         return;
     }
-    string model_dir = "./models/RIFE/" + model;
 
     bool rife_v2=false, rife_v4=false;
-    // TODO 分析输入模型的参数(TTA，uhd等)和GPU选择
-    bool tta_mode = false, tta_temporal_mode = false, uhd_mode = false;
     if (model.find("rife-v2") != string::npos)      rife_v2 = true;
     else if (model.find("rife-v3") != string::npos) rife_v2 = true;
     else if (model.find("rife-v4") != string::npos) rife_v4 = true;
     status.rife = new RIFE(info.use_gpu?info.gpu_index:-1, tta_mode, tta_temporal_mode, uhd_mode, 1, rife_v2, rife_v4);
+    
+    string model_dir = "./models/RIFE/" + model;
 #ifdef _WIN32
     if(status.rife->load(wstring(model_dir.begin(),model_dir.end()))) throw model+"模型打开失败";
 #else
     if(status.rife->load(model_dir)) throw model+"模型打开失败";
 #endif
-    _rifes[model] = status.rife;
+    _rifes[key] = status.rife;
 }
 
 void RifeFrameGetter::_initConverter(int width, int height){
@@ -113,7 +123,6 @@ HvFrame RifeFrameGetter::_makeMiddelFrame(double timestep) {
     if (f0.fr->format == AV_PIX_FMT_RGB24) {
         m0 = Mat(w, h, f0.fr->data[0], (size_t)3, 1);
     } else {
-        if (f0_rgb.isEmpty()) f0_rgb.createBuffer(w, h, AV_PIX_FMT_RGB24);
         if (!rgb_valid[0]) {
             cvt->convert(f0, f0_rgb);
             rgb_valid[0] = true;
@@ -123,7 +132,6 @@ HvFrame RifeFrameGetter::_makeMiddelFrame(double timestep) {
     if (f1.fr->format == AV_PIX_FMT_RGB24) {
         m1 = Mat(w, h, f1.fr->data[0], (size_t)3, 1);
     } else {
-        if (f1_rgb.isEmpty()) f1_rgb.createBuffer(w, h, AV_PIX_FMT_RGB24);
         if (!rgb_valid[1]) {
             cvt->convert(f1, f1_rgb);
             rgb_valid[1] = true;
@@ -196,7 +204,7 @@ bool RifeFrameGetter::_nextFrameProcess(HvFrame& fr){
             f1 = move(tmp_fr);
             status.rife->buf_next();
             
-            f0_rgb.swap(f1_rgb);
+            f0_rgb.swap(f1_rgb);    // 使用交换而不释放，省去重新分配内存
             rgb_valid[0] = rgb_valid[1];
             rgb_valid[1] = false;
             
@@ -275,7 +283,7 @@ bool RifeFrameGetter::_nextFrameNoProcess(HvFrame& fr){
             f1 = move(tmp_fr);
             status.rife->buf_next();    // 将rife实例中的缓存进行位移
             
-            f0_rgb.swap(f1_rgb);
+            f0_rgb.swap(f1_rgb);    // 使用交换而不释放，省去重新分配内存
             rgb_valid[0] = rgb_valid[1];
             rgb_valid[1] = false;
             

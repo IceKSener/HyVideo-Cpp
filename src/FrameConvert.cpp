@@ -14,11 +14,9 @@ FrameConvert::~FrameConvert() {
 }
 
  HvFrame& FrameConvert::convert(const HvFrame& fr_in, HvFrame& fr_out) {
-    AVFrame &fi=*fr_in.fr;
+    AVFrame &fi=*fr_in.fr, &fo=*fr_out.fr;
     const FrameFormat in_fmt = {fi.width, fi.height, (AVPixelFormat)fi.format};
     if (dst_fmt == in_fmt) return fr_out = fr_in;
-
-    fr_buf.createBuffer(dst_fmt.width, dst_fmt.height, dst_fmt.format);
     
     SwsContext* sws_ctx;
     auto iter = sws_map.find(in_fmt);
@@ -32,8 +30,16 @@ FrameConvert::~FrameConvert() {
         sws_map[in_fmt] = sws_ctx;
     }
     
-    sws_scale(sws_ctx, fi.data, fi.linesize, 0, fi.height, fr_buf.fr->data, fr_buf.fr->linesize);
-    fr_out = move(fr_buf);
+    const FrameFormat out_fmt = {fo.width, fo.height, (AVPixelFormat)fo.format};
+    if (fr_in.fr!=fr_out.fr && out_fmt==dst_fmt) {
+        // 原地操作，减少内存分配开销
+        sws_scale(sws_ctx, fi.data, fi.linesize, 0, fi.height, fo.data, fo.linesize);
+    } else {
+        fr_buf.createBuffer(dst_fmt.width, dst_fmt.height, dst_fmt.format);
+        sws_scale(sws_ctx, fi.data, fi.linesize, 0, fi.height, fr_buf.fr->data, fr_buf.fr->linesize);
+        fr_out = move(fr_buf);
+    }
+
     av_frame_copy_props(fr_out.fr, fr_in.fr);
     return fr_out;
 }

@@ -1,0 +1,11 @@
+{
+    "type":"in",
+    "upscale":{
+        "enable" : true,
+        "use_gpu": true,
+        "engine" : "real-cugan",
+        "model" : "models-nose",
+        "scale" : 2,
+        "noise" : 0
+    }
+}
