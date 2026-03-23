@@ -37,16 +37,17 @@ PacketWriter& PacketWriter::setMapping(const unordered_map<int,int> mapping) {
 
 PacketWriter::PacketWriter(PacketWriter &&pw)
     : fr_ref(move(pw.fr_ref))
+    , fmt_ctx(pw.fmt_ctx)
+    , out_timebase(pw.out_timebase)
 {
     stream_mapping=pw.stream_mapping; pw.stream_mapping=nullptr;
     pkt_buf=pw.pkt_buf; pw.pkt_buf=nullptr;
     pkt_ref=pw.pkt_ref; pw.pkt_ref=nullptr;
-    fmt_ctx=pw.fmt_ctx;
     ctx=pw.ctx; pw.ctx=nullptr;
-    out_timebase = pw.out_timebase;
 }
 
 PacketWriter::~PacketWriter() {
+    writeEnd();     // 出错导致程序退出时可能bug？
     if (ctx) avcodec_free_context(&ctx);
     if (pkt_buf) av_packet_free(&pkt_buf);
     if (pkt_ref) av_packet_free(&pkt_ref);
@@ -86,7 +87,9 @@ PacketWriter& PacketWriter::sendVideoFrame(const HvFrame& fr) {
     return *this;
 }
 
-PacketWriter& PacketWriter::writeEnd() {
+void PacketWriter::writeEnd() {
+    if (is_end) return;
+    is_end = true;
     Assert(avcodec_send_frame(ctx, NULL));
     int ret;
     while (true) {
@@ -96,11 +99,11 @@ PacketWriter& PacketWriter::writeEnd() {
                 break;
             case AVERROR_EOF:
                 Assert(av_write_trailer(fmt_ctx));
-                return *this;
+                return;
             default:
                 Assert(ret);
         }
     }
     Assert(av_write_trailer(fmt_ctx));
-    return *this;
+    return;
 }

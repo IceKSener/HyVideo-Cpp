@@ -24,7 +24,7 @@ public:
     //写入Frame，缓存在内部Packet中
     PacketWriter& sendVideoFrame(const HvFrame& fr);
     //写入文件结尾，并将缓存内容写入清空
-    PacketWriter& writeEnd();
+    void writeEnd();
 private:
     std::unordered_map<int,int> *stream_mapping = nullptr;
     AVPacket *pkt_buf = nullptr, *pkt_ref=nullptr;
@@ -32,6 +32,7 @@ private:
     AVFormatContext *fmt_ctx = nullptr;
     AVCodecContext *ctx = nullptr;
     AVRational out_timebase;
+    bool is_end = false;
 };
 
 #endif // PACKETWRITER_HPP
