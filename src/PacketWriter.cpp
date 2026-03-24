@@ -44,6 +44,7 @@ PacketWriter::PacketWriter(PacketWriter &&pw)
     pkt_buf=pw.pkt_buf; pw.pkt_buf=nullptr;
     pkt_ref=pw.pkt_ref; pw.pkt_ref=nullptr;
     ctx=pw.ctx; pw.ctx=nullptr;
+    is_end=pw.is_end; pw.is_end=true;
 }
 
 PacketWriter::~PacketWriter() {

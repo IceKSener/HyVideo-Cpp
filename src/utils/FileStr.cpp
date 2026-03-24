@@ -1,5 +1,9 @@
 #include "utils/FileStr.hpp"
 
+#ifdef WIN32
+#include <windows.h>
+#endif // WIN32
+
 using namespace std;
 using namespace filesystem;
 
@@ -54,7 +58,7 @@ bool findConf(path& out, const string &name, const path& dir) {
     }
     return false;
 }
-std::string getTimeStr(int64_t pts, AVRational timebase) {
+string getTimeStr(int64_t pts, AVRational timebase) {
     if (timebase.den == 0) return "<None>";
     double time = pts * timebase.num / (double) timebase.den;
     char buf[50];
@@ -67,4 +71,34 @@ std::string getTimeStr(int64_t pts, AVRational timebase) {
     min=time/60; time-=min*60;
     sprintf(buf, "%02d:%02d:%06.3lf", hour, min, time);
     return string(buf);
+}
+
+string LocaltoUTF8(const string& str) {
+    // local to unicode
+    int wide_size = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
+    if (wide_size <= 0) return string();
+    wchar_t wide_buf[wide_size] = {0};
+    MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, wide_buf, wide_size);
+
+    // unicode to utf8
+    int utf8_size = WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, NULL, 0, NULL, NULL);
+    if (utf8_size <= 0) return string();
+    char utf8_buf[utf8_size] = {0};
+    WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, utf8_buf, utf8_size, NULL, NULL);
+    return utf8_buf;
+}
+
+string UTF8toLocal(const string& str) {
+    // utf8 to unicode
+    int wide_size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, NULL, 0);
+    if (wide_size <= 0) return string();
+    wchar_t wide_buf[wide_size] = {0};
+    MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, wide_buf, wide_size);
+
+    // unicode to local
+    int local_size = WideCharToMultiByte(CP_ACP, 0, wide_buf, -1, NULL, 0, NULL, NULL);
+    if (local_size <= 0) return string();
+    char local_buf[local_size] = {0};
+    WideCharToMultiByte(CP_ACP, 0, wide_buf, -1, local_buf, local_size, NULL, NULL);
+    return local_buf;
 }

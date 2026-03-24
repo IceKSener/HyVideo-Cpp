@@ -80,7 +80,7 @@ bool Task::_taskCalcScores(){
     const double CUT = hasCut ? getReal("cut") : 0;
 
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
-    AvLog("Task: Calc");
+    AvLog("Task: Calc\n");
     if(hasStatic) AvLog("static:%lf\n", STATIC);
     if(hasCut) AvLog("cut:   %lf\n", CUT);
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");

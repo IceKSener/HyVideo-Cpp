@@ -9,31 +9,6 @@
 
 #ifdef WIN32
 #include <windows.h>
-std::vector<std::string> GetUTF8Argv(int argc, char *argv[]) {
-    std::vector<std::string> utf8_args;
-    for (int i=0 ; i<argc ; ++i) {
-        char* _ = argv[i];
-        // local to unicode
-        int wide_size = MultiByteToWideChar(CP_ACP, 0, argv[i], -1, NULL, 0);
-        if (wide_size <= 0) {
-            utf8_args.push_back(std::string());
-            continue;
-        }
-        wchar_t wide_buf[wide_size] = {0};
-        MultiByteToWideChar(CP_ACP, 0, argv[i], -1, wide_buf, wide_size);
-
-        // unicode to utf8
-        int utf8_size = WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, NULL, 0, NULL, NULL);
-        if (utf8_size <= 0) {
-            utf8_args.push_back(std::string());
-            continue;
-        }
-        char utf8_buf[utf8_size] = {0};
-        WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, utf8_buf, utf8_size, NULL, NULL);
-        utf8_args.push_back(utf8_buf);
-    }
-    return utf8_args;
-}
 #endif // WIN32
 
 using namespace std;
@@ -85,14 +60,15 @@ Task analyzeTask(const string& str) {
 static void test(){
 }
 
-int main(int argc, char *_argv[]) {
+int main(int argc, char *argv[]) {
 #ifdef WIN32
-    auto args = GetUTF8Argv(argc, _argv);
-    char* argv[argc];
-    for (int i=0 ; i<argc ; ++i) argv[i] = args[i].data();
-#else
-    auto& argv = _argv;
+    string args[argc];
+    for (int i=0 ; i<argc ; ++i) {
+        args[i] = LocaltoUTF8(argv[i]);
+        argv[i] = args[i].data();
+    }
 #endif
+    setlocale(LC_ALL, "en_US.UTF-8");
     clocker.start(1);
     test();
     ArgParser ap(argc, argv);
