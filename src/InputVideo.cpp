@@ -6,7 +6,7 @@
 using namespace std;
 
 InputVideo::InputVideo(InputVideo&& vd)
-    : path(path)
+    : path(vd.path)
     , is_open(vd.is_open)
     , info(move(vd.info))
     , fmt_ctx(vd.fmt_ctx)

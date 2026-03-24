@@ -7,6 +7,35 @@
 #include "utils/Clocker.hpp"
 #include "Task.hpp"
 
+#ifdef WIN32
+#include <windows.h>
+std::vector<std::string> GetUTF8Argv(int argc, char *argv[]) {
+    std::vector<std::string> utf8_args;
+    for (int i=0 ; i<argc ; ++i) {
+        char* _ = argv[i];
+        // local to unicode
+        int wide_size = MultiByteToWideChar(CP_ACP, 0, argv[i], -1, NULL, 0);
+        if (wide_size <= 0) {
+            utf8_args.push_back(std::string());
+            continue;
+        }
+        wchar_t wide_buf[wide_size] = {0};
+        MultiByteToWideChar(CP_ACP, 0, argv[i], -1, wide_buf, wide_size);
+
+        // unicode to utf8
+        int utf8_size = WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, NULL, 0, NULL, NULL);
+        if (utf8_size <= 0) {
+            utf8_args.push_back(std::string());
+            continue;
+        }
+        char utf8_buf[utf8_size] = {0};
+        WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, utf8_buf, utf8_size, NULL, NULL);
+        utf8_args.push_back(utf8_buf);
+    }
+    return utf8_args;
+}
+#endif // WIN32
+
 using namespace std;
 
 class ArgParser{
@@ -29,7 +58,7 @@ public:
 };
 
 // 解析任务参数，格式: ":任务类型[:参数名[=参数值(默认为on)]]"
-Task analyzeTask(string str) {
+Task analyzeTask(const string& str) {
     vector<string> clips = strsplit(tolower(str.substr(1)), ":");
     if (clips.empty()) ThrowErr("任务参数不能为空");
     string type = clips[0];
@@ -56,7 +85,14 @@ Task analyzeTask(string str) {
 static void test(){
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *_argv[]) {
+#ifdef WIN32
+    auto args = GetUTF8Argv(argc, _argv);
+    char* argv[argc];
+    for (int i=0 ; i<argc ; ++i) argv[i] = args[i].data();
+#else
+    auto& argv = _argv;
+#endif
     clocker.start(1);
     test();
     ArgParser ap(argc, argv);
