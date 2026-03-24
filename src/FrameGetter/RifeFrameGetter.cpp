@@ -5,7 +5,6 @@ extern "C"{
 }
 
 #include "utils/Assert.hpp"
-#include "utils/Clocker.hpp"
 #include "utils/Logger.hpp"
 #include "utils/FileStr.hpp"
 
@@ -138,13 +137,10 @@ HvFrame RifeFrameGetter::_makeMiddelFrame(double timestep) {
         }
         m1 = Mat(w, h, f1_rgb.fr->data[0], (size_t)3, 1);
     }
-    // DEBUG
-    clocker.start(20);
     HvFrame fr_out;
     fr_out.createBuffer(w, h, AV_PIX_FMT_RGB24);
     Mat mo(w, h, fr_out.fr->data[0], (size_t)3, 1);
     status.rife->process_buf(m0, m1, timestep, mo);
-    clocker.end(20);
     
     rescaleFrame(fr_out.fr, f1.fr->time_base, f0_pts+(f1_pts-f0_pts)*timestep);
     ++fr_index;

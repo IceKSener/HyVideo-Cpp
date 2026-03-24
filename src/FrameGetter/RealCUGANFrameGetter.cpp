@@ -58,8 +58,10 @@ bool RealCUGANFrameGetter::nextFrame(HvFrame& fr) {
     status.realcugan->process(mi, mo);
     av_frame_copy_props(fr.fr, fr_in.fr);
 
+#ifdef DEBUG
     static int _frame_num=0;
     fprintf(stderr, "FRAME#%d\n", ++_frame_num);
+#endif // DEBUG
 
     return true;
 }
