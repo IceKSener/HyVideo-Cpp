@@ -5,3 +5,6 @@ test.cmake
 * copy
 *.hex.h
 /models/*
+configs
+realesrgan*
+Mid_Rife.cpp
