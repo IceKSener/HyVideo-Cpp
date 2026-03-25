@@ -32,7 +32,7 @@ RealCUGANFrameGetter::~RealCUGANFrameGetter() {
 
 bool RealCUGANFrameGetter::nextFrame(HvFrame& fr) {
     if (status.is_end) return false;
-    auto& fr_in = status.fr_in;
+    auto &fr_in=status.fr_in, &fr_rgb=status.fr_rgb;
     const int scale = info.scale;
     
     if (!getter->nextFrame(fr_in)) {
@@ -45,15 +45,16 @@ bool RealCUGANFrameGetter::nextFrame(HvFrame& fr) {
     if(!status.realcugan) _initRealCUGAN();
 
     Mat mi; // mi仅用于存储图片宽高和数据地址
-    if (fr_in.fr->format == AV_PIX_FMT_RGB24) {
+    if (fr_in.fr->format==AV_PIX_FMT_RGB24 && w*3==fr_in.fr->linesize[0]) {
         mi = Mat(w, h, fr_in.fr->data[0], (size_t)3, 3);
     } else {
         if (!cvt) _initConverter(w, h);
-        cvt->convert(fr_in, status.fr_rgb);
-        mi = Mat(w, h, status.fr_rgb.fr->data[0], (size_t)3, 3);
+        fr_rgb.createBuffer(w, h, AV_PIX_FMT_RGB24, 1);
+        cvt->convert(fr_in, fr_rgb);
+        mi = Mat(w, h, fr_rgb.fr->data[0], (size_t)3, 3);
     }
 
-    fr.createBuffer(w*scale, h*scale, AV_PIX_FMT_RGB24);
+    fr.createBuffer(w*scale, h*scale, AV_PIX_FMT_RGB24, 1);
     Mat mo(w*scale, h*scale, fr.fr->data[0], (size_t)3, 3);
     status.realcugan->process(mi, mo);
     av_frame_copy_props(fr.fr, fr_in.fr);

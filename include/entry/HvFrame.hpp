@@ -46,12 +46,12 @@ public:
         fr = f.fr;
         f.fr = tmp;
     }
-    inline HvFrame& createBuffer(int width, int height, AVPixelFormat format) {
+    inline HvFrame& createBuffer(int width, int height, AVPixelFormat format, int align=0) {
         av_frame_unref(fr);
         fr->width = width;
         fr->height = height;
         fr->format = format;
-        Assert(av_frame_get_buffer(fr, 0));
+        Assert(av_frame_get_buffer(fr, align));
         return *this;
     }
 };

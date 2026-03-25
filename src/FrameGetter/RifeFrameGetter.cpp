@@ -119,26 +119,28 @@ HvFrame RifeFrameGetter::_makeMiddelFrame(double timestep) {
     // 将f0、f1转为RGB格式
     const int w=f1.fr->width, h=f1.fr->height;
     Mat m0, m1; // m0，m1仅用于存储图片宽高和数据地址
-    if (f0.fr->format == AV_PIX_FMT_RGB24) {
+    if (f0.fr->format==AV_PIX_FMT_RGB24 && f0.fr->width*3==f0.fr->linesize[0]) {
         m0 = Mat(w, h, f0.fr->data[0], (size_t)3, 1);
     } else {
         if (!rgb_valid[0]) {
+            f0_rgb.createBuffer(w, h, AV_PIX_FMT_RGB24, 1);
             cvt->convert(f0, f0_rgb);
             rgb_valid[0] = true;
         }
         m0 = Mat(w, h, f0_rgb.fr->data[0], (size_t)3, 1);
     }
-    if (f1.fr->format == AV_PIX_FMT_RGB24) {
+    if (f1.fr->format==AV_PIX_FMT_RGB24 && f1.fr->width*3==f1.fr->linesize[0]) {
         m1 = Mat(w, h, f1.fr->data[0], (size_t)3, 1);
     } else {
         if (!rgb_valid[1]) {
+            f1_rgb.createBuffer(w, h, AV_PIX_FMT_RGB24, 1);
             cvt->convert(f1, f1_rgb);
             rgb_valid[1] = true;
         }
         m1 = Mat(w, h, f1_rgb.fr->data[0], (size_t)3, 1);
     }
     HvFrame fr_out;
-    fr_out.createBuffer(w, h, AV_PIX_FMT_RGB24);
+    fr_out.createBuffer(w, h, AV_PIX_FMT_RGB24, 1);
     Mat mo(w, h, fr_out.fr->data[0], (size_t)3, 1);
     status.rife->process_buf(m0, m1, timestep, mo);
     
