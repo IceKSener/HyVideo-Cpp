@@ -25,7 +25,8 @@ public:
     OutputVideo& setEncoder(const AVCodec *encoder){ info.codec=encoder; return *this; }
     OutputVideo& setVSTimebase(const AVRational& time_base){ info.vs_timebase=time_base; return *this; }
     OutputVideo& setPixelFormat(AVPixelFormat pix_fmt){ info.pix_fmt=pix_fmt; return *this; }
-    OutputVideo& setOption(const std::string& key, int value){ av_dict_set_int(&opt,key.c_str(),value,0); return *this; }
+    OutputVideo& setOption(const char* key, int value){ av_dict_set_int(&opt,key,value,0); return *this; }
+    OutputVideo& setOption(const char* key, const char* value){ av_dict_set(&opt,key,value,0); return *this; }
     // 复制音频流，返回输出视频的音频流
     AVStream* addAudio(const AVStream *input_audio);
 

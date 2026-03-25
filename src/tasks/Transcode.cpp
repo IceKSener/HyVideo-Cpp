@@ -313,6 +313,7 @@ bool Task::_taskTranscode(){
                 .setFPS(outfps)
                 .setVSTimebase(vd_in.getVS()->time_base)
                 .setOption("crf", target.crf);
+            if (target.faststart) vd_out.setOption("movflags", "faststart");
             // 计算输出宽高
             {
                 const int ALIGN=2;  // 宽高为2的倍数
