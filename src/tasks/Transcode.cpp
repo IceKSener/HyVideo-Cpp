@@ -229,12 +229,15 @@ bool Task::_taskTranscode(){
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 
     // 构建输出目标并执行
-    // i：输入视频序号
-    for (int i=0 ; i<inputs.size() ; ++i) {
-        auto& vd_in = inputs[i];
+    // 输入视频序号
+    int input_index = -1;
+    while (!inputs.empty() && !GlobalConfig.interrupted) {
+        InputVideo vd_in = move(inputs.front());
+        inputs.pop_front();
+        ++input_index;
         vd_in.print();
-        auto& info = vd_in.getInfo();
 
+        auto& info = vd_in.getInfo();
         int outw=info.width, outh=info.height;
         AVRational outfps = info.fps;
 
@@ -297,8 +300,8 @@ bool Task::_taskTranscode(){
             // 防止重名输出
             {
                 string originName = path.stem().string();
-                for(int i=0 ; fs::exists(path)||exist_files[path] ; ++i){
-                    path.replace_filename(originName+"-"+to_string(i)+".0").replace_extension(target.ext);
+                for(int suffix_num=0 ; fs::exists(path)||exist_files[path] ; ++suffix_num){
+                    path.replace_filename(originName+"-"+to_string(suffix_num)+".0").replace_extension(target.ext);
                 }
                 exist_files[path]=true;
             }

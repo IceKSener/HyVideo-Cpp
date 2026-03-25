@@ -1,4 +1,4 @@
-#include "Score.hpp"
+#include "data/Score.hpp"
 
 #include <fstream>
 

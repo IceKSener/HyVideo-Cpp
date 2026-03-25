@@ -1,15 +1,17 @@
 #include <string>
 #include <vector>
+#include <deque>
+
+#ifdef WIN32
+#include <windows.h>
+#endif // WIN32
+
 #include "GlobalConfig.hpp"
 #include "utils/Assert.hpp"
 #include "utils/Logger.hpp"
 #include "utils/FileStr.hpp"
 #include "utils/Clocker.hpp"
 #include "Task.hpp"
-
-#ifdef WIN32
-#include <windows.h>
-#endif // WIN32
 
 using namespace std;
 
@@ -72,7 +74,7 @@ int main(int argc, char *argv[]) {
     clocker.start(1);
     test();
     ArgParser ap(argc, argv);
-    vector<Task> tasks;
+    deque<Task> tasks;
     // 解析参数获取程序任务
     try {
         const char* arg;
@@ -97,7 +99,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    for(Task& task: tasks) {
+    while (!tasks.empty()) {
+        Task task = move(tasks.front());
+        tasks.pop_front();
+
         if (GlobalConfig.interrupted) break;
         try {
             task.Run();

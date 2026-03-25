@@ -5,7 +5,8 @@
 #include "utils/Assert.hpp"
 #include "utils/FileStr.hpp"
 #include "utils/Logger.hpp"
-#include "Score.hpp"
+#include "data/Score.hpp"
+#include "GlobalConfig.hpp"
 #include "FrameGetter/VideoFrameReader.hpp"
 
 using namespace std;
@@ -85,7 +86,10 @@ bool Task::_taskCalcScores(){
     if(hasCut) AvLog("cut:   %lf\n", CUT);
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 
-    for (auto& vd : inputs) {
+    while (!inputs.empty() && !GlobalConfig.interrupted) {
+        InputVideo vd = move(inputs.front());
+        inputs.pop_front();
+        
         vd.print();
         vector <double> scoreValues;
         if (type == ScoreType::MSE) scoreValues = CalcMSE(vd);
