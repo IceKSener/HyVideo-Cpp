@@ -7,7 +7,9 @@ _GlobalConfig& GlobalConfig = _GlobalConfig::getInstance();
 
 static void int_handler(int sig) {
     if (sig != SIGINT) return;
-    AvLog("\n\n\n\n\n<<<<<<<<<<<<<<<<<<<<用户中断>>>>>>>>>>>>>>>>>>>>\n\n\n\n\n\n");
+    AvLog("\n\n\n\n");
+    AvLog("<<<<<<<<<<<<<<<<<<<<用户中断>>>>>>>>>>>>>>>>>>>>\n");
+    AvLog("\n\n\n\n");
     GlobalConfig.interrupted = true;
 }
 

@@ -22,6 +22,7 @@ extern "C"{
 #include "utils/Assert.hpp"
 #include "utils/Logger.hpp"
 #include "utils/FileStr.hpp"
+#include "utils/Pause.hpp"
 
 using namespace std;
 using namespace filesystem;
@@ -391,6 +392,18 @@ bool Task::_taskTranscode(){
             if (bytesRead-bytesProcessed > 2*1024*1024) {
                 bytesProcessed = bytesRead;
                 AvLog("Frame[%5d] : %s / %s\n", frame_num, getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
+            }
+            if (isKeyPressed('P')) {
+                // 暂停转码
+                AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+                AvLog("转码暂停，按下C键继续\n");
+                AvLog("当前进度：[%d / %d] (%s / %s)\n", frame_num, info.num_frames
+                    , getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
+                AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+                waitForKey('C');
+                AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+                AvLog("暂停结束\n");
+                AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
             }
             av_packet_unref(pkt);
         }
