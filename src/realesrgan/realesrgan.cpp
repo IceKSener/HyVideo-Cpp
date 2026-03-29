@@ -6,43 +6,10 @@
 #include <vector>
 #include <iostream>
 
-static const uint32_t realesrgan_preproc_spv_data[] = {
-#include "realesrgan_preproc.spv.hex.h"
-};
-static const uint32_t realesrgan_preproc_fp16s_spv_data[] = {
-#include "realesrgan_preproc_fp16s.spv.hex.h"
-};
-static const uint32_t realesrgan_preproc_int8s_spv_data[] = {
-#include "realesrgan_preproc_int8s.spv.hex.h"
-};
-static const uint32_t realesrgan_postproc_spv_data[] = {
-#include "realesrgan_postproc.spv.hex.h"
-};
-static const uint32_t realesrgan_postproc_fp16s_spv_data[] = {
-#include "realesrgan_postproc_fp16s.spv.hex.h"
-};
-static const uint32_t realesrgan_postproc_int8s_spv_data[] = {
-#include "realesrgan_postproc_int8s.spv.hex.h"
-};
-
-static const uint32_t realesrgan_preproc_tta_spv_data[] = {
-#include "realesrgan_preproc_tta.spv.hex.h"
-};
-static const uint32_t realesrgan_preproc_tta_fp16s_spv_data[] = {
-#include "realesrgan_preproc_tta_fp16s.spv.hex.h"
-};
-static const uint32_t realesrgan_preproc_tta_int8s_spv_data[] = {
-#include "realesrgan_preproc_tta_int8s.spv.hex.h"
-};
-static const uint32_t realesrgan_postproc_tta_spv_data[] = {
-#include "realesrgan_postproc_tta.spv.hex.h"
-};
-static const uint32_t realesrgan_postproc_tta_fp16s_spv_data[] = {
-#include "realesrgan_postproc_tta_fp16s.spv.hex.h"
-};
-static const uint32_t realesrgan_postproc_tta_int8s_spv_data[] = {
-#include "realesrgan_postproc_tta_int8s.spv.hex.h"
-};
+#include "realesrgan/comps/realesrgan_preproc.comp.hex.h"
+#include "realesrgan/comps/realesrgan_postproc.comp.hex.h"
+#include "realesrgan/comps/realesrgan_preproc_tta.comp.hex.h"
+#include "realesrgan/comps/realesrgan_postproc_tta.comp.hex.h"
 
 RealESRGAN::RealESRGAN(int gpuid, bool _tta_mode) {
     vkdev = gpuid == -1 ? 0 : ncnn::get_gpu_device(gpuid);
@@ -94,6 +61,7 @@ int RealESRGAN::load(const std::string &parampath, const std::string &modelpath)
         if (!fp)
         {
             fwprintf(stderr, L"_wfopen %ls failed\n", parampath.c_str());
+            return -1;
         }
 
         net.load_param(fp);
@@ -105,6 +73,7 @@ int RealESRGAN::load(const std::string &parampath, const std::string &modelpath)
         if (!fp)
         {
             fwprintf(stderr, L"_wfopen %ls failed\n", modelpath.c_str());
+            return -1;
         }
 
         net.load_model(fp);
@@ -126,52 +95,42 @@ int RealESRGAN::load(const std::string &parampath, const std::string &modelpath)
         specializations[0].i = 0;
 #endif
 
-        realesrgan_preproc = new ncnn::Pipeline(vkdev);
-        realesrgan_preproc->set_optimal_local_size_xyz(32, 32, 3);
+        {
+            static std::vector<uint32_t> spirv;
+            static ncnn::Mutex lock;
+            {
+                ncnn::MutexLockGuard guard(lock);
+                if (spirv.empty())
+                {
+                    if (tta_mode)
+                        compile_spirv_module(realesrgan_preproc_tta_comp_data, sizeof(realesrgan_preproc_tta_comp_data), net.opt, spirv);
+                    else
+                        compile_spirv_module(realesrgan_preproc_comp_data, sizeof(realesrgan_preproc_comp_data), net.opt, spirv);
+                }
+            }
 
-        realesrgan_postproc = new ncnn::Pipeline(vkdev);
-        realesrgan_postproc->set_optimal_local_size_xyz(32, 32, 3);
+            realesrgan_preproc = new ncnn::Pipeline(vkdev);
+            realesrgan_preproc->set_optimal_local_size_xyz(32, 32, 3);
+            realesrgan_preproc->create(spirv.data(), spirv.size() * 4, specializations);
+        }
 
-        if (tta_mode) {
-            if (net.opt.use_fp16_storage && net.opt.use_int8_storage)
-                realesrgan_preproc->create(realesrgan_preproc_tta_int8s_spv_data,
-                                           sizeof(realesrgan_preproc_tta_int8s_spv_data), specializations);
-            else if (net.opt.use_fp16_storage)
-                realesrgan_preproc->create(realesrgan_preproc_tta_fp16s_spv_data,
-                                           sizeof(realesrgan_preproc_tta_fp16s_spv_data), specializations);
-            else
-                realesrgan_preproc->create(realesrgan_preproc_tta_spv_data, sizeof(realesrgan_preproc_tta_spv_data),
-                                           specializations);
+        {
+            static std::vector<uint32_t> spirv;
+            static ncnn::Mutex lock;
+            {
+                ncnn::MutexLockGuard guard(lock);
+                if (spirv.empty())
+                {
+                    if (tta_mode)
+                        compile_spirv_module(realesrgan_postproc_tta_comp_data, sizeof(realesrgan_postproc_tta_comp_data), net.opt, spirv);
+                    else
+                        compile_spirv_module(realesrgan_postproc_comp_data, sizeof(realesrgan_postproc_comp_data), net.opt, spirv);
+                }
+            }
 
-            if (net.opt.use_fp16_storage && net.opt.use_int8_storage)
-                realesrgan_postproc->create(realesrgan_postproc_tta_int8s_spv_data,
-                                            sizeof(realesrgan_postproc_tta_int8s_spv_data), specializations);
-            else if (net.opt.use_fp16_storage)
-                realesrgan_postproc->create(realesrgan_postproc_tta_fp16s_spv_data,
-                                            sizeof(realesrgan_postproc_tta_fp16s_spv_data), specializations);
-            else
-                realesrgan_postproc->create(realesrgan_postproc_tta_spv_data, sizeof(realesrgan_postproc_tta_spv_data),
-                                            specializations);
-        } else {
-            if (net.opt.use_fp16_storage && net.opt.use_int8_storage)
-                realesrgan_preproc->create(realesrgan_preproc_int8s_spv_data, sizeof(realesrgan_preproc_int8s_spv_data),
-                                           specializations);
-            else if (net.opt.use_fp16_storage)
-                realesrgan_preproc->create(realesrgan_preproc_fp16s_spv_data, sizeof(realesrgan_preproc_fp16s_spv_data),
-                                           specializations);
-            else
-                realesrgan_preproc->create(realesrgan_preproc_spv_data, sizeof(realesrgan_preproc_spv_data),
-                                           specializations);
-
-            if (net.opt.use_fp16_storage && net.opt.use_int8_storage)
-                realesrgan_postproc->create(realesrgan_postproc_int8s_spv_data,
-                                            sizeof(realesrgan_postproc_int8s_spv_data), specializations);
-            else if (net.opt.use_fp16_storage)
-                realesrgan_postproc->create(realesrgan_postproc_fp16s_spv_data,
-                                            sizeof(realesrgan_postproc_fp16s_spv_data), specializations);
-            else
-                realesrgan_postproc->create(realesrgan_postproc_spv_data, sizeof(realesrgan_postproc_spv_data),
-                                            specializations);
+            realesrgan_postproc = new ncnn::Pipeline(vkdev);
+            realesrgan_postproc->set_optimal_local_size_xyz(32, 32, 3);
+            realesrgan_postproc->create(spirv.data(), spirv.size() * 4, specializations);
         }
     }
 

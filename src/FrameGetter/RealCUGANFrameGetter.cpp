@@ -2,6 +2,8 @@
 
 #include <sstream>
 
+#include "GlobalConfig.hpp"
+
 using namespace std;
 using Mat = ncnn::Mat;
 
@@ -59,11 +61,6 @@ bool RealCUGANFrameGetter::nextFrame(HvFrame& fr) {
     status.realcugan->process(mi, mo);
     av_frame_copy_props(fr.fr, fr_in.fr);
 
-#ifdef DEBUG
-    static int _frame_num=0;
-    fprintf(stderr, "FRAME#%d\n", ++_frame_num);
-#endif // DEBUG
-
     return true;
 }
 
@@ -90,7 +87,7 @@ void RealCUGANFrameGetter::_initRealCUGAN() {
     if (cugan = _realcugans[key])
         return;
     
-    cugan = new RealCUGAN(info.use_gpu?info.gpu_index:-1, tta_mode, 1);
+    cugan = new RealCUGAN(info.use_gpu?info.gpu_index:-1, tta_mode, info.use_gpu?1:GlobalConfig.cpu_num);
     
     string full_root = "./models/RealCUGAN/" + model_root;
 #ifdef _WIN32

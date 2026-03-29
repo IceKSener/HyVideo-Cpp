@@ -15,6 +15,7 @@ extern "C"{
 #include "FrameGetter/VideoFrameReader.hpp"
 #include "FrameGetter/RifeFrameGetter.hpp"
 #include "FrameGetter/RealCUGANFrameGetter.hpp"
+#include "FrameGetter/RealESRGANFrameGetter.hpp"
 #include "FrameGetter/BufferFrameGetter.hpp"
 #include "GlobalConfig.hpp"
 #include "PacketReader.hpp"
@@ -46,9 +47,13 @@ struct _process{
         bool use_gpu=false;
         string engine;
         void *args;
-        ~_upscale(){
-            if(args) return;
-            if(engine=="real-cugan") delete (RealCUGANFrameGetter::Args*)args;
+        void clearArg() {
+            if (!args) return;
+            if (engine == "real-cugan") delete (RealCUGANFrameGetter::Args*)args;
+            if (engine == "real-esrgan") delete (RealESRGANFrameGetter::Args*)args;
+        }
+        ~_upscale() {
+            clearArg();
         }
     };
     struct _interpolation{
@@ -56,9 +61,12 @@ struct _process{
         bool process;
         double target_fps;
         void *args;
-        ~_interpolation(){
-            if(!args) return;
-            if(engine=="rife") delete (RifeFrameGetter::Args*)args;
+        void clearArg() {
+            if (!args) return;
+            if (engine == "rife") delete (RifeFrameGetter::Args*)args;
+        }
+        ~_interpolation() {
+            clearArg();
         }
     };
     // 超分辨率配置
@@ -162,7 +170,8 @@ static _process ReadProcess(const string& conf_str){
                 auto& json_v = conf["upscale"];
                 if (json_v["enable"]) {
                     auto& pro_v = process.upscale.emplace();
-                    pro_v.engine = json_v.value("engine", "real-cugan");
+                    pro_v.clearArg();
+                    pro_v.engine = tolower((string)json_v["engine"]);
                     if (pro_v.engine == "real-cugan") {
                         RealCUGANFrameGetter::Args *args = new RealCUGANFrameGetter::Args;
                         args->use_gpu = json_v.value("use_gpu", true);
@@ -170,6 +179,14 @@ static _process ReadProcess(const string& conf_str){
                         args->scale = json_v.value("scale", 2);
                         args->noise = json_v.value("noise", -1);
                         args->syncgap = json_v.value("syncgap", 3);
+                        args->tilesize = json_v.value("tilesize", 0);
+                        if (args->use_gpu) args->gpu_index = json_v.value("gpu_index", 0);
+                        pro_v.args = args;
+                    } else if (pro_v.engine == "real-esrgan") {
+                        RealESRGANFrameGetter::Args *args = new RealESRGANFrameGetter::Args;
+                        args->use_gpu = json_v.value("use_gpu", true);
+                        args->model = json_v.value("model", "realesr-animevideov3");
+                        args->scale = json_v.value("scale", 4);
                         args->tilesize = json_v.value("tilesize", 0);
                         if (args->use_gpu) args->gpu_index = json_v.value("gpu_index", 0);
                         pro_v.args = args;
@@ -182,6 +199,7 @@ static _process ReadProcess(const string& conf_str){
                 auto& json_v = conf["interpolation"];
                 if (json_v["enable"]) {
                     auto& pro_v = process.interpolation.emplace();
+                    pro_v.clearArg();
                     pro_v.engine = tolower((string)json_v["engine"]);
                     pro_v.process = json_v.value("process", true);
                     pro_v.target_fps = json_v.value("target_fps", 60.0);
@@ -255,6 +273,15 @@ bool Task::_taskTranscode(){
                     if (args.model.find("models-nose") != string::npos) args.syncgap = 0;
                     auto realcuganGetter = make_shared<RealCUGANFrameGetter>(frameReader, args);
                     frameReader = realcuganGetter;
+                    outw *= args.scale;
+                    outh *= args.scale;
+                }
+            } else if (cfg.engine == "real-esrgan") {
+                RealESRGANFrameGetter::Args& args = *(RealESRGANFrameGetter::Args*)cfg.args;
+                // 若不超分，直接跳过这步处理
+                if (args.scale != 1) {
+                    auto realesrganGetter = make_shared<RealESRGANFrameGetter>(frameReader, args);
+                    frameReader = realesrganGetter;
                     outw *= args.scale;
                     outh *= args.scale;
                 }

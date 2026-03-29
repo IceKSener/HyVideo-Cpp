@@ -7,6 +7,7 @@ extern "C"{
 #include "utils/Assert.hpp"
 #include "utils/Logger.hpp"
 #include "utils/FileStr.hpp"
+#include "GlobalConfig.hpp"
 
 using namespace std;
 using Mat = ncnn::Mat;
@@ -95,7 +96,7 @@ void RifeFrameGetter::_initRIFE(){
     if (model.find("rife-v2") != string::npos)      rife_v2 = true;
     else if (model.find("rife-v3") != string::npos) rife_v2 = true;
     else if (model.find("rife-v4") != string::npos) rife_v4 = true;
-    status.rife = new RIFE(info.use_gpu?info.gpu_index:-1, tta_mode, tta_temporal_mode, uhd_mode, 1, rife_v2, rife_v4);
+    status.rife = new RIFE(info.use_gpu?info.gpu_index:-1, tta_mode, tta_temporal_mode, uhd_mode, info.use_gpu?1:GlobalConfig.cpu_num, rife_v2, rife_v4);
     
     string model_dir = "./models/RIFE/" + model;
 #ifdef _WIN32

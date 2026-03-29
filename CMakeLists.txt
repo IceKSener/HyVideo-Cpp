@@ -38,6 +38,7 @@ target_link_libraries(HyVideo ${FFMPEG_LIBRARIES} ncnn)
 # 查找所有 .comp 文件
 file(GLOB RIFE_COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/rife/comps/*.comp")
 file(GLOB REALCUGAN_COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/realcugan/comps/*.comp")
+file(GLOB REALCUGAN_COMP_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "include/realesrgan/comps/*.comp")
 list(APPEND COMP_FILES ${RIFE_COMP_FILES} ${REALCUGAN_COMP_FILES})
 # 收集生成的头文件
 set(GENERATED_HEADERS)

@@ -6,5 +6,4 @@ test.cmake
 *.hex.h
 /models/*
 configs
-realesrgan*
 Mid_Rife.cpp

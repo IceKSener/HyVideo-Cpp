@@ -8,7 +8,7 @@ extern "C"{
 #include <mutex>
 #include <thread>
 #include <memory>
-
+// TODO 实现异步多帧并行处理
 class BufferFrameGetter: public IFreamGetter{
 private:
     std::thread read_thread;

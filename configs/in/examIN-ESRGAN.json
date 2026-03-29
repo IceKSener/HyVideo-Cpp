@@ -1,0 +1,10 @@
+{
+    "type":"in",
+    "upscale":{
+        "enable" : true,
+        "use_gpu": true,
+        "engine" : "real-esrgan",
+        "model" : "realesr-animevideov3",
+        "scale" : 2
+    }
+}
