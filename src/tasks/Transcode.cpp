@@ -4,7 +4,7 @@
 #include <fstream>
 #include <filesystem>
 #include <memory>
-// #include <unordered_map>
+#include <chrono>
 
 extern "C"{
     #include "libavutil/pixdesc.h"
@@ -231,18 +231,20 @@ static const AVCodec* searchEncoder(const std::string &codec_name){
     return avcodec_find_encoder(codec->id);
 }
 
-bool Task::_taskTranscode(){
+bool Task::_taskTranscode() {
+    const int TOTAL_INPUTS = inputs.size();
     // 设置输出目标配置
     vector<_target> targets = ReadTargets(getStr("conf_out"));
     if (targets.empty()) ThrowErr("请指定视频输出配置");
-    const int num_out = targets.size();
+    const int TOTAL_TARGETS = targets.size();
 
     // 读取处理配置
     _process process_cfg = ReadProcess(getStr("conf_in"));
 
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
     AvLog("Task: Transcode\n");
-    AvLog("Targets: %d\n", num_out);
+    AvLog("Inputs: %d\n", TOTAL_INPUTS);
+    AvLog("Targets: %d\n", TOTAL_TARGETS);
     if (process_cfg.upscale) AvLog("  + upscale\n");
     if (process_cfg.interpolation) AvLog("  + interpolation\n");
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
@@ -387,9 +389,26 @@ bool Task::_taskTranscode(){
 
         // 转码
         int frame_num = 0;
-        int64_t& bytesRead = vd_in.getFormatContext()->pb->bytes_read;
-        int64_t bytesProcessed = 0;
-        const string TotalTime = getTimeStr(vd_in.getVS()->duration, vd_in.getVS()->time_base);
+        auto& nowTime = chrono::steady_clock::now;
+        auto timeSince = [](chrono::steady_clock::time_point start_time){
+            return chrono::duration_cast<chrono::milliseconds>(nowTime()-start_time).count();
+        };
+        
+        const int PROGRESS_SIZE = 10;
+        struct _progress{
+            int64_t time_cost;
+            int frame_gen;
+            _progress():time_cost(0),frame_gen(0){}
+        } progress[PROGRESS_SIZE];
+        int progress_index = 0;
+        int64_t time_cost = 0;
+        int frame_gen = 0;
+        auto last_print_time = nowTime();
+        int last_frame_num = 0;
+        
+        const double TotalTime = vd_in.getVS()->duration * av_q2d(vd_in.getVS()->time_base);
+        const string TotalTimeStr = getTimeStr(TotalTime);
+        const int64_t& IN_BYTES = vd_in.getFormatContext()->pb->bytes_read;
 
         PacketReader pkt_reader(vd_in);
         PacketWriter *pw = writers.data();
@@ -406,31 +425,66 @@ bool Task::_taskTranscode(){
                 vfr->addPacket(pkt);    // 解析输入的视频packet
                 while (frameReader->nextFrame(fr_raw)) {
                     fr_raw.fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
-                    for (int j=0 ; j<num_out ; ++j)  // 为每个输出文件写入转换后对应的帧
+                    for (int j=0 ; j<TOTAL_TARGETS ; ++j)  // 为每个输出文件写入转换后对应的帧
                         pw[j].sendVideoFrame(fc[j].convert(fr_raw, fr_out));
                     ++frame_num;
                 }
             } else if (type == AVMEDIA_TYPE_AUDIO) {
                 AVRational* a_in_timebase = &(_stream->time_base);
-                for (int j=0 ; j<num_out ; ++j) {
+                for (int j=0 ; j<TOTAL_TARGETS ; ++j) {
                     pw[j].sendPacket(pkt, a_in_timebase);
                 }
             }
-            if (bytesRead-bytesProcessed > 2*1024*1024) {
-                bytesProcessed = bytesRead;
-                AvLog("Frame[%5d] : %s / %s\n", frame_num, getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
+            int64_t time_delta = timeSince(last_print_time);
+#ifdef DEBUG
+            if (time_delta > 1000) {
+#else // DEBUG
+            if (time_delta > 5000) {
+                // 每至少5秒打印一次输出
+#endif // DEBUG
+                auto& p  = progress[(progress_index++)%PROGRESS_SIZE];
+                time_cost += time_delta - p.time_cost;
+                frame_gen += (frame_num-last_frame_num) - p.frame_gen;
+                p.time_cost = time_delta;
+                p.frame_gen = frame_num-last_frame_num;
+                
+                const double CurrentTime = pkt->pts * av_q2d(_stream->time_base);
+                const string CurrentTimeStr = getTimeStr(CurrentTime);
+                AvLog("Frame[%5d] : %s / %s", frame_num, CurrentTimeStr.c_str(), TotalTimeStr.c_str());
+                if (CurrentTime > 0) {
+                    AvLog("\t%8.2lfkbps ->", IN_BYTES/(125*CurrentTime));
+                    for (auto& output: outputs)
+                        AvLog(" %8.2lfkbps", output.getFormatContext()->pb->bytes_written/(125*CurrentTime));
+                }
+                if (frame_gen > 0) {
+                    AvLog("  \tLeft Time: %s", getTimeStr((info.num_frames-frame_num)*time_cost/(1000.0*frame_gen), true).c_str());
+                }
+                AvLog("\n");
+                last_frame_num = frame_num;
+                last_print_time = nowTime();
+                time_delta = 0;
             }
             if (isKeyPressed('P')) {
+                if (time_delta) {
+                    auto& p  = progress[(progress_index++)%PROGRESS_SIZE];
+                    time_cost += time_delta - p.time_cost;
+                    frame_gen += (frame_num-last_frame_num) - p.frame_gen;
+                    p.time_cost = time_delta;
+                    p.frame_gen = frame_num-last_frame_num;
+                }
                 // 暂停转码
                 AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
                 AvLog("转码暂停，按下C键继续\n");
+                AvLog("当前输入：[%d/%d] %s\n", input_index, TOTAL_INPUTS, vd_in.getPath().c_str());
                 AvLog("当前进度：[%d / %d] (%s / %s)\n", frame_num, info.num_frames
-                    , getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
+                    , getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTimeStr.c_str());
                 AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
                 waitForKey('C');
                 AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
                 AvLog("暂停结束\n");
                 AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+                last_frame_num = frame_num;
+                last_print_time = nowTime();
             }
             av_packet_unref(pkt);
         }
@@ -438,11 +492,11 @@ bool Task::_taskTranscode(){
         vfr->addPacket(NULL);
         while (frameReader->nextFrame(fr_raw) && !GlobalConfig.interrupted) {
             fr_raw.fr->pict_type = AVPictureType::AV_PICTURE_TYPE_NONE;
-            for (int j=0 ; j<num_out ; ++j)
+            for (int j=0 ; j<TOTAL_TARGETS ; ++j)
                 pw[j].sendVideoFrame(fc[j].convert(fr_raw, fr_out));
             ++frame_num;
         }
-        for (int j=0 ; j<num_out ; ++j)
+        for (int j=0 ; j<TOTAL_TARGETS ; ++j)
             pw[j].writeEnd(); // 清除缓冲区
     }
     return true;

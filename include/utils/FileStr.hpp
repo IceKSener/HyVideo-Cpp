@@ -17,8 +17,10 @@ std::vector<std::string> strsplit(std::string str, const std::string& c);
 std::string withsuffix(const std::string& file, const std::string& suffix);
 // 根据配置名找到配置文件路径
 bool findConf(std::filesystem::path& out, const std::string& name,const std::filesystem::path& dir);
+// 根据double转时间字符串
+std::string getTimeStr(double time, bool simple=false);
 // 根据pts、timebase计算时间字符串
-std::string getTimeStr(int64_t pts, AVRational timebase);
+std::string getTimeStr(int64_t pts, AVRational timebase, bool simple=false);
 #ifdef WIN32
 // 将本地编码字符串转为UTF-8字符串
 std::string LocaltoUTF8(const std::string& str);
