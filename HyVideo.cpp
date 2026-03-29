@@ -1,5 +1,11 @@
 #include <string>
 #include <vector>
+#include <deque>
+
+#ifdef WIN32
+#include <windows.h>
+#endif // WIN32
+
 #include "GlobalConfig.hpp"
 #include "utils/Assert.hpp"
 #include "utils/Logger.hpp"
@@ -29,7 +35,7 @@ public:
 };
 
 // 解析任务参数，格式: ":任务类型[:参数名[=参数值(默认为on)]]"
-Task analyzeTask(string str) {
+Task analyzeTask(const string& str) {
     vector<string> clips = strsplit(tolower(str.substr(1)), ":");
     if (clips.empty()) ThrowErr("任务参数不能为空");
     string type = clips[0];
@@ -57,10 +63,18 @@ static void test(){
 }
 
 int main(int argc, char *argv[]) {
+#ifdef WIN32
+    string args[argc];
+    for (int i=0 ; i<argc ; ++i) {
+        args[i] = LocaltoUTF8(argv[i]);
+        argv[i] = args[i].data();
+    }
+#endif
+    setlocale(LC_ALL, "en_US.UTF-8");
     clocker.start(1);
     test();
     ArgParser ap(argc, argv);
-    vector<Task> tasks;
+    deque<Task> tasks;
     // 解析参数获取程序任务
     try {
         const char* arg;
@@ -85,7 +99,10 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    for(Task& task: tasks) {
+    while (!tasks.empty()) {
+        Task task = move(tasks.front());
+        tasks.pop_front();
+
         if (GlobalConfig.interrupted) break;
         try {
             task.Run();

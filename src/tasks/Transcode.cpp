@@ -22,6 +22,7 @@ extern "C"{
 #include "utils/Assert.hpp"
 #include "utils/Logger.hpp"
 #include "utils/FileStr.hpp"
+#include "utils/Pause.hpp"
 
 using namespace std;
 using namespace filesystem;
@@ -229,12 +230,15 @@ bool Task::_taskTranscode(){
     AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
 
     // 构建输出目标并执行
-    // i：输入视频序号
-    for (int i=0 ; i<inputs.size() ; ++i) {
-        auto& vd_in = inputs[i];
+    // 输入视频序号
+    int input_index = -1;
+    while (!inputs.empty() && !GlobalConfig.interrupted) {
+        InputVideo vd_in = move(inputs.front());
+        inputs.pop_front();
+        ++input_index;
         vd_in.print();
-        auto& info = vd_in.getInfo();
 
+        auto& info = vd_in.getInfo();
         int outw=info.width, outh=info.height;
         AVRational outfps = info.fps;
 
@@ -297,8 +301,8 @@ bool Task::_taskTranscode(){
             // 防止重名输出
             {
                 string originName = path.stem().string();
-                for(int i=0 ; fs::exists(path)||exist_files[path] ; ++i){
-                    path.replace_filename(originName+"-"+to_string(i)+".0").replace_extension(target.ext);
+                for(int suffix_num=0 ; fs::exists(path)||exist_files[path] ; ++suffix_num){
+                    path.replace_filename(originName+"-"+to_string(suffix_num)+".0").replace_extension(target.ext);
                 }
                 exist_files[path]=true;
             }
@@ -310,6 +314,7 @@ bool Task::_taskTranscode(){
                 .setFPS(outfps)
                 .setVSTimebase(vd_in.getVS()->time_base)
                 .setOption("crf", target.crf);
+            if (target.faststart) vd_out.setOption("movflags", "faststart");
             // 计算输出宽高
             {
                 const int ALIGN=2;  // 宽高为2的倍数
@@ -387,6 +392,18 @@ bool Task::_taskTranscode(){
             if (bytesRead-bytesProcessed > 2*1024*1024) {
                 bytesProcessed = bytesRead;
                 AvLog("Frame[%5d] : %s / %s\n", frame_num, getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
+            }
+            if (isKeyPressed('P')) {
+                // 暂停转码
+                AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+                AvLog("转码暂停，按下C键继续\n");
+                AvLog("当前进度：[%d / %d] (%s / %s)\n", frame_num, info.num_frames
+                    , getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTime.c_str());
+                AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+                waitForKey('C');
+                AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
+                AvLog("暂停结束\n");
+                AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
             }
             av_packet_unref(pkt);
         }

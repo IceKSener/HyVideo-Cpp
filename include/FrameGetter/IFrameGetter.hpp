@@ -1,7 +1,7 @@
 #ifndef IFRAMEGETTER_HPP
 #define IFRAMEGETTER_HPP 1
 
-#include "entry/HvFrame.hpp"
+#include "data/HvFrame.hpp"
 
 
 class IFreamGetter{

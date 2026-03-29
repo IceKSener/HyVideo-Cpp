@@ -19,5 +19,11 @@ std::string withsuffix(const std::string& file, const std::string& suffix);
 bool findConf(std::filesystem::path& out, const std::string& name,const std::filesystem::path& dir);
 // 根据pts、timebase计算时间字符串
 std::string getTimeStr(int64_t pts, AVRational timebase);
+#ifdef WIN32
+// 将本地编码字符串转为UTF-8字符串
+std::string LocaltoUTF8(const std::string& str);
+// 将UTF-8字符串转为本地编码字符串
+std::string UTF8toLocal(const std::string& str);
+#endif // WIN32
 
 #endif // FILESTR_HPP

@@ -7,7 +7,7 @@ extern "C"{
     #include "libswscale/swscale.h"
 }
 
-#include "entry/HvFrame.hpp"
+#include "data/HvFrame.hpp"
 
 class FrameConvert {
 public:

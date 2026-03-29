@@ -8,7 +8,7 @@
 
 #include "IFrameGetter.hpp"
 #include "FrameConvert.hpp"
-#include "Score.hpp"
+#include "data/Score.hpp"
 
 class RifeFrameGetter:public IFreamGetter{
 public:

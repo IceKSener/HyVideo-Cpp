@@ -1,7 +1,7 @@
 #ifndef TASK_HPP
 #define TASK_HPP 1
 
-#include <vector>
+#include <deque>
 #include <optional>
 #include <map>
 
@@ -22,10 +22,10 @@ public:
     // 开始执行任务
     bool Run();
 
-    std::vector<InputVideo>& getInputs(){ return inputs; }
+    std::deque<InputVideo>& getInputs(){ return inputs; }
 private:
     TaskType type;
-    std::vector<InputVideo> inputs;
+    std::deque<InputVideo> inputs;
     TaskArgs args;
 
     // 以字符串类型读取参数

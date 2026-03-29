@@ -16,7 +16,11 @@ FrameConvert::~FrameConvert() {
  HvFrame& FrameConvert::convert(const HvFrame& fr_in, HvFrame& fr_out) {
     AVFrame &fi=*fr_in.fr, &fo=*fr_out.fr;
     const FrameFormat in_fmt = {fi.width, fi.height, (AVPixelFormat)fi.format};
-    if (dst_fmt == in_fmt) return fr_out = fr_in;
+    if (dst_fmt == in_fmt) {
+        for (int i=0 ; i<sizeof(fi.linesize)/sizeof(fi.linesize[0]) ; ++i)
+            if (fi.linesize[i] != fo.linesize[i]) break;
+        return fr_out = fr_in;
+    }
     
     SwsContext* sws_ctx;
     auto iter = sws_map.find(in_fmt);

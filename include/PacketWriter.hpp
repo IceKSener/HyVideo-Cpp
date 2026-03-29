@@ -10,7 +10,7 @@ extern "C"{
 
 #include "OutputVideo.hpp"
 #include "InputVideo.hpp"
-#include "entry/HvFrame.hpp"
+#include "data/HvFrame.hpp"
 
 class PacketWriter{
 public:

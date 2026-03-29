@@ -8,7 +8,6 @@
 
 #include "IFrameGetter.hpp"
 #include "FrameConvert.hpp"
-#include "Score.hpp"
 
 class RealCUGANFrameGetter:public IFreamGetter{
 public:

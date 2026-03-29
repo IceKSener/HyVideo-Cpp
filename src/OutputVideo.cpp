@@ -68,7 +68,7 @@ OutputVideo& OutputVideo::openOutput() {
     if(!(fmt_ctx->oformat->flags&AVFMT_NOFILE))
         Assert(avio_open2(&fmt_ctx->pb, path.c_str(), AVIO_FLAG_WRITE, NULL, NULL));
     
-    Assert(avformat_write_header(fmt_ctx, NULL));
+    Assert(avformat_write_header(fmt_ctx, &opt));
     info.vs_timebase = v_stream->time_base;     // avformat_write_header后流的时间基被设置为正确的值
 
     is_open = true;
