@@ -64,7 +64,7 @@ static void test(){
 
 int main(int argc, char *argv[]) {
 #ifdef WIN32
-    string args[argc];
+    vector<string> args(argc);
     for (int i=0 ; i<argc ; ++i) {
         args[i] = LocaltoUTF8(argv[i]);
         argv[i] = args[i].data();

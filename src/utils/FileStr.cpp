@@ -66,8 +66,8 @@ string getTimeStr(double time, bool simple) {
         time = -time;
     }
     int hour, min;
-    hour=time/3600; time-=hour*3600;
-    min=time/60; time-=min*60;
+    hour=(int)time/3600; time-=hour*3600;
+    min=(int)time/60; time-=min*60;
     if (simple && hour==0) {
         if (min == 0) sprintf(buf, "%06.3lf", time);
         else sprintf(buf, "%02d:%06.3lf", min, time);
@@ -87,13 +87,15 @@ string LocaltoUTF8(const string& str) {
     // local to unicode
     int wide_size = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
     if (wide_size <= 0) return string();
-    wchar_t wide_buf[wide_size] = {0};
+    vector<wchar_t> v_wide_buf(wide_size);
+    wchar_t *wide_buf = v_wide_buf.data();
     MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, wide_buf, wide_size);
 
     // unicode to utf8
     int utf8_size = WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, NULL, 0, NULL, NULL);
     if (utf8_size <= 0) return string();
-    char utf8_buf[utf8_size] = {0};
+    vector<char> v_utf8_buf(utf8_size);
+    char *utf8_buf = v_utf8_buf.data();
     WideCharToMultiByte(CP_UTF8, 0, wide_buf, -1, utf8_buf, utf8_size, NULL, NULL);
     return utf8_buf;
 }
@@ -102,13 +104,15 @@ string UTF8toLocal(const string& str) {
     // utf8 to unicode
     int wide_size = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, NULL, 0);
     if (wide_size <= 0) return string();
-    wchar_t wide_buf[wide_size] = {0};
+    vector<wchar_t> v_wide_buf(wide_size);
+    wchar_t *wide_buf = v_wide_buf.data();
     MultiByteToWideChar(CP_UTF8, 0, str.c_str(), -1, wide_buf, wide_size);
 
     // unicode to local
     int local_size = WideCharToMultiByte(CP_ACP, 0, wide_buf, -1, NULL, 0, NULL, NULL);
     if (local_size <= 0) return string();
-    char local_buf[local_size] = {0};
+    vector<char> v_local_buf(local_size);
+    char *local_buf = v_local_buf.data();
     WideCharToMultiByte(CP_ACP, 0, wide_buf, -1, local_buf, local_size, NULL, NULL);
     return local_buf;
 }

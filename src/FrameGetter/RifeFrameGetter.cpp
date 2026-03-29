@@ -1,5 +1,7 @@
 #include "FrameGetter/RifeFrameGetter.hpp"
 
+#include <sstream>
+
 extern "C"{
     #include "libavutil/imgutils.h"
 }
@@ -48,10 +50,10 @@ RifeFrameGetter::~RifeFrameGetter() {
 RifeFrameGetter& RifeFrameGetter::setProcess(bool process, const Score *score) {
     if (process && score!=nullptr) {
         info.process.emplace(score->CalcProcess());
-        info._NextFrame = _nextFrameProcess;
+        info._NextFrame = &RifeFrameGetter::_nextFrameProcess;
     } else {
         info.process.reset();
-        info._NextFrame = _nextFrameNoProcess;
+        info._NextFrame = &RifeFrameGetter::_nextFrameNoProcess;
     }
     return *this;
 }

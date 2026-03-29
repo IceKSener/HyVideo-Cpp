@@ -390,7 +390,7 @@ bool Task::_taskTranscode() {
         // 转码
         int frame_num = 0;
         auto& nowTime = chrono::steady_clock::now;
-        auto timeSince = [](chrono::steady_clock::time_point start_time){
+        auto timeSince = [&nowTime](chrono::steady_clock::time_point start_time){
             return chrono::duration_cast<chrono::milliseconds>(nowTime()-start_time).count();
         };
         

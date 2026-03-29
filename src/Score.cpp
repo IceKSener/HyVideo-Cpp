@@ -1,6 +1,7 @@
 #include "data/Score.hpp"
 
 #include <fstream>
+#include <cstring>
 
 #include "utils/Assert.hpp"
 
@@ -61,11 +62,6 @@ Score Score::LoadScob(std::string path) {
     return score;
 }
 
-static uint8_t strlen(const char* str) {
-    const char* s = str;
-    while (*s) ++s;
-    return s - str;
-}
 static uint8_t* _write(uint8_t* output, const char *key, const void *data, uint32_t datasize) {
     uint8_t klen = strlen(key);
     *output++ = klen;

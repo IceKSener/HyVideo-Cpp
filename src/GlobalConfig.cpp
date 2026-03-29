@@ -1,5 +1,7 @@
 #include "GlobalConfig.hpp"
 
+#include <csignal>
+
 #include "utils/Logger.hpp"
 
 _GlobalConfig _GlobalConfig::instance;
