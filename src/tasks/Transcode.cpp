@@ -107,7 +107,7 @@ static vector<json> FlatImports(const vector<string>& conf_names){
             if (cfg["import"].is_array()) {
                 auto& imports = cfg["import"];
                 for (auto it=imports.rbegin(); it!=imports.rend() ; ++it)
-                    conf_to_read.push(tolower((string)*it));
+                    conf_to_read.push((string)*it);
             }
             cfg["_name"] = conf_name;
             confs.push_back(cfg);

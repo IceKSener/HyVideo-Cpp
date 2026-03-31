@@ -11,7 +11,13 @@ using namespace std;
 
 void _MakeErr(const string &msg, const char *file, int line) {
 #ifndef DEBUG
-    file = strstr(file, "src\\");
+    const char* subpath = file;
+    while (subpath = strstr(file, "src\\")) {
+        file = subpath+4;
+    }
+    while (subpath = strstr(file, "src/")) {
+        file = subpath+4;
+    }
 #endif //DEBUG
     ostringstream oss;
     oss << "========================================\n\n";
