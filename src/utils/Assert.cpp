@@ -20,19 +20,20 @@ void _MakeErr(const string &msg, const char *file, int line) {
     throw oss.str();
 }
 
-#if _MSC_VER
-char av_error[AV_ERROR_MAX_STRING_SIZE] = { 0 };
-#define av_err2str(errnum) av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, errnum)
-#endif // _MSC_VER
-
 // 0为成功否则失败
 int _assert(int rtn, const char* file, int line) {
-    if(rtn){ _MakeErr(av_err2str(rtn),file,line); }
+    if (rtn) {
+        char err_msg[AV_ERROR_MAX_STRING_SIZE];
+        _MakeErr(av_make_error_string(err_msg, sizeof(err_msg), rtn), file, line);
+    }
     return rtn;
 }
 // 0或正数为成功否则失败
 int _assertI(int rtn, const char* file, int line) {
-    if(rtn<0){ _MakeErr(av_err2str(rtn),file,line); }
+    if (rtn < 0) {
+        char err_msg[AV_ERROR_MAX_STRING_SIZE];
+        _MakeErr(av_make_error_string(err_msg, sizeof(err_msg), rtn), file, line);
+    }
     return rtn;
 }
 // 非NULL为成功否则失败

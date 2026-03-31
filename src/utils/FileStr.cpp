@@ -83,6 +83,7 @@ string getTimeStr(int64_t pts, AVRational timebase, bool simple) {
     return getTimeStr(time, simple);
 }
 
+#ifdef WIN32
 string LocaltoUTF8(const string& str) {
     // local to unicode
     int wide_size = MultiByteToWideChar(CP_ACP, 0, str.c_str(), -1, NULL, 0);
@@ -116,3 +117,4 @@ string UTF8toLocal(const string& str) {
     WideCharToMultiByte(CP_ACP, 0, wide_buf, -1, local_buf, local_size, NULL, NULL);
     return local_buf;
 }
+#endif // WIN32

@@ -9,7 +9,7 @@
 extern "C"{
     #include "libavutil/pixdesc.h"
 }
-#include "nlohmann\json.hpp"
+#include "nlohmann/json.hpp"
 
 #include "OutputVideo.hpp"
 #include "FrameGetter/VideoFrameReader.hpp"
