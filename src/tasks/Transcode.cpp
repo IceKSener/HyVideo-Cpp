@@ -226,8 +226,9 @@ static _process ReadProcess(const string& conf_str){
 // 根据编码器名称找到编码器
 static const AVCodec* searchEncoder(const std::string &codec_name){
     const AVCodec *codec = avcodec_find_encoder_by_name(codec_name.c_str());
-    if(!codec) codec = avcodec_find_decoder_by_name(codec_name.c_str());
-    if(!codec) ThrowErr("找不到编码器"+codec_name);
+    if (codec) return codec;
+    codec = avcodec_find_decoder_by_name(codec_name.c_str());
+    if (!codec) ThrowErr("找不到编码器"+codec_name);
     return avcodec_find_encoder(codec->id);
 }
 

@@ -26,7 +26,7 @@ PacketWriter::PacketWriter(OutputVideo &vd) {
     // 将正确的数据写回视频流编码信息中
     Assert(avcodec_parameters_from_context(vd.getVS()->codecpar, ctx));
     if (!vd.isOpen()) vd.openOutput();
-    out_timebase = vd.getVSTimebase();
+    ctx->time_base = out_timebase = vd.getVSTimebase();
 }
 
 PacketWriter& PacketWriter::setMapping(const unordered_map<int,int> mapping) {
