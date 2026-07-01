@@ -382,6 +382,7 @@ bool Task::_taskTranscode() {
                 AVStream* new_audio = vd_out.addAudio(a_stream);
                 mapping[a_stream->index] = new_audio->index;
             }
+            if (!vd_out.isInit()) vd_out.initOutput();
             mapping[vd_in.getVS()->index] = vd_out.getVS()->index;
             // 创建PacketWriter
             writers.emplace_back(vd_out)
