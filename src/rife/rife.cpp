@@ -104,7 +104,7 @@ static bool load_param_model(ncnn::Net& net, const std::wstring& modeldir, const
     return true;
 }
 #else
-static void load_param_model(ncnn::Net& net, const std::string& modeldir, const char* name){
+static bool load_param_model(ncnn::Net& net, const std::string& modeldir, const char* name){
     char parampath[256];
     char modelpath[256];
     sprintf(parampath, "%s/%s.param", modeldir.c_str(), name);

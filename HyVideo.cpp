@@ -36,9 +36,9 @@ public:
 
 // 解析任务参数，格式: ":任务类型[:参数名[=参数值(默认为on)]]"
 Task analyzeTask(const string& str) {
-    vector<string> clips = strsplit(tolower(str.substr(1)), ":");
+    vector<string> clips = strsplit(str.substr(1), ":");
     if (clips.empty()) ThrowErr("任务参数不能为空");
-    string type = clips[0];
+    string type = tolower(clips[0]);
     TaskType tasktype;
     TaskArgs args;
     if (type == "calc") {
@@ -52,9 +52,9 @@ Task analyzeTask(const string& str) {
     for (int i=1 ; i<clips.size() ; ++i) {
         const auto& arg = clips[i];
         if((index=arg.find('=')) >= 0)
-            args[arg.substr(0,index)] = arg.substr(index+1);
+            args[tolower(arg.substr(0,index))] = arg.substr(index+1);
         else
-            args[arg] = "on";
+            args[tolower(arg)] = "on";
     }
     return Task(tasktype, args);
 }
