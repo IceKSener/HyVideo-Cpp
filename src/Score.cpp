@@ -91,7 +91,7 @@ vector<int8_t> Score::CalcProcess() const{
         int i = 0;
         for(; i<len-2 ; ++i){
             nS = score[i+2];
-            if (cS<=STATIC && pS>STATIC && nS>STATIC) {
+            if (cS<=STATIC && pS>STATIC*2 && nS>STATIC*2) {
                 cS=pS; process[i+1]=-1;// 静帧
             } else if (cS-pS > CUT) process[i+1]=1;// 转场
         }
