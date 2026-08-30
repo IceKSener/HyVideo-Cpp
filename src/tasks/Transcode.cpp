@@ -262,6 +262,7 @@ bool Task::_taskTranscode() {
         auto& info = vd_in.getInfo();
         int outw=info.width, outh=info.height;
         AVRational outfps = info.fps;
+        int TotalOutputFramesNum = info.num_frames;
 
         shared_ptr<VideoFrameReader> vfr = make_shared<VideoFrameReader>(vd_in, true);
         shared_ptr<IFreamGetter> frameReader = vfr;
@@ -304,6 +305,7 @@ bool Task::_taskTranscode() {
                 );
                 outfps = av_mul_q(outfps,fpsx);
                 rifeGetter->setFPSX(fpsx);
+                TotalOutputFramesNum = (TotalOutputFramesNum-1)*av_q2d(fpsx)+1;
                 if(cfg.process){
                     string scob_path=vd_in.getPath()+".scob";
                     try{
@@ -459,7 +461,7 @@ bool Task::_taskTranscode() {
                         AvLog(" %8.2lfkbps", output.getFormatContext()->pb->bytes_written/(125*CurrentTime));
                 }
                 if (frame_gen > 0) {
-                    AvLog("  \tLeft Time: %s", getTimeStr((info.num_frames-frame_num)*time_cost/(1000.0*frame_gen), true).c_str());
+                    AvLog("  \tLeft Time: %s", getTimeStr((TotalOutputFramesNum-frame_num)*time_cost/(1000.0*frame_gen), true).c_str());
                 }
                 AvLog("\n");
                 last_frame_num = frame_num;
@@ -478,7 +480,7 @@ bool Task::_taskTranscode() {
                 AvLog("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n");
                 AvLog("转码暂停，按下C键继续\n");
                 AvLog("当前输入：[%d/%d] %s\n", input_index, TOTAL_INPUTS, vd_in.getPath().c_str());
-                AvLog("当前进度：[%d / %d] (%s / %s)\n", frame_num, info.num_frames
+                AvLog("当前进度：[%d / %d] (%s / %s)\n", frame_num, TotalOutputFramesNum
                     , getTimeStr(pkt->pts, _stream->time_base).c_str(), TotalTimeStr.c_str());
                 AvLog("\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
                 waitForKey('C');
